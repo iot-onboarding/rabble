@@ -1,5 +1,5 @@
 # rabble
-RAdius profile for Bonded Bluetooth Low Energy (Rabble)
+Radius profile for Bonded Bluetooth Low Energy (Rabble)
 
 
 ## Note Well
