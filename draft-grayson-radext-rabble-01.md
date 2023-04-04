@@ -675,8 +675,13 @@ The NAS associated with the BLE Visited Central Host is provisioned with the ide
 The NAS/BLE Visited Host MAY be statically configured with the identity of a RADIUS Server. Alternatively,
 the NAS/BLE Visited Host MAY use the contents of an Advertizement Element received from the BLE Peripheral
 to derive an FQDN of the RADIUS sever and use RFC 7585 {{RFC7585}} to dynamically resolve the address of the RADIUS
-server. For example, the Bluetooth URI data type Advertizement Element (0x24) can be used to encode a hostname that
-identifies the network which operates the BLE Home Central Host.
+server. For example, the peripheral can use the Bluetooth URI data type Advertizement Element (0x24) to encode
+the Bluetooth defined 'empty scheme' name tag together with a hostname that
+identifies the network which operates the BLE Home Central Host associated with the peripheral.
+Alternatively, a federation of operators of BLE Visited Centrals and
+RADIUS Servers can define the use of the Bluetooth defined Manufacturer Specific Advertizement Data Element (0xFF) together with
+a Company Identifier that identifies the federation to signal a federation defined sub-type that encodes information that
+enables the BLE Visited Central Host to derive an FQDN of the RADIUS sever associated with the advertizing peripheral.
 
 The NAS/BLE Host generates a RADIUS Access-Request message using the prand
 from the RPA as the User-Name attribute and the hash from the RPA as the User-Password attribute.
