@@ -239,7 +239,7 @@ BLE Central device which comprises a second BLE Central Controller and a second 
 (Visited) Central Host which has been enhanced with Network Access Server (NAS)
 functionality. The BLE Peripheral MUST be configured to send low duty cycle
 advertising events using the BLE Peripheral's RPA that are detected by the NAS/BLE
-Visited Central Host. The NAS/BLE Visited Central Host decodes the Advertisement(s) sent by the
+Visited Central Host. The NAS/BLE Visited Central Host receives the Advertisement(s) sent by the
 BLE Peripheral and MAY use the presence and/or contents of specific Advertising Elements
 to decide whether to trigger a RADIUS exchange with a RADIUS Server which has
 access to the keying material exposed by the BLE Home Central Host.
@@ -666,8 +666,8 @@ The BLE Peripheral moves into coverage of a second BLE Central device that is in
 
 The BLE Peripheral sends Advertisements using its Resolvable Public Address.
 The contents of the Advertizements are signalled to a BLE Visited Central Host associated with the
-second BLE Central device. The decoded Advertisements sent by the
-BLE Peripheral, are used by the
+second BLE Central device. The received Advertisements sent by the
+BLE Peripheral are used by the
 BLE Visited Central Host to decide whether to trigger a RADIUS exchange,  e.g., using the presence
 and/or contents of specific Advertising Elements.
 
