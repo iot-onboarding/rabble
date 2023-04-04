@@ -437,9 +437,6 @@ The BLE-Keying-Material (TBA3) Attribute allows the
 transfer of Identity Address(es) and cryptographic keying material from a
 RADIUS Server to the BLE Visited Central Host.
 
-Any packet that contains a BLE-Keying-Material Attribute MUST also
-include the Message-Authenticator attribute.
-
 A single BLE-Keying-Material Attributes MUST be included in
 an Access-Accept packet.
 
