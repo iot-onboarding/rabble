@@ -2,7 +2,7 @@
 title: RADIUS profile for Bonded Bluetooth Low Energy peripherals
 abbrev: RABBLE
 docname: draft-grayson-radext-rabble-01
-date: 2023-04-03
+date: 2023-04-19
 category: std
 submissiontype: IETF
 
