@@ -48,7 +48,6 @@ normative:
 informative:
   RFC2866:
   RFC3394:
-  RFC6218:
   RFC7585:
   I-D.shahzad-scim-device-model:
   BLUETOOTH:
@@ -435,45 +434,11 @@ Description
 
 The BLE-Keying-Material (TBA3) Attribute allows the
 transfer of Identity Address(es) and cryptographic keying material from a
-RADIUS Server to the BLE Visited Central Host.
+RADIUS Server to the BLE Visited Central Host. It can be treated as
+opaque data by the RADIUS Server.
 
 A single BLE-Keying-Material Attributes MUST be included in
 an Access-Accept packet.
-
-A summary of the BLE-Keying-Material Attribute format is
-shown below. The fields are transmitted from left to right.
-
-
-~~~~~~~~~~
-0                   1                   2                   3
-0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|     Type      |  Length       |          Peripheral IA     
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-              Peripheral Identity Address (cont'd)              |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                     Central Identity Address                
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      Central IA (cont'd)       |           KM Type             |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                             KEK ID
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                           KEK ID (cont'd)
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                           KEK ID (cont'd)
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                           KEK ID (cont'd)                      |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                               IV
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                            IV (cont'd)                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                       Keying Material Data
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-
-~~~~~~~~~~
-{: #attr-pkm title="Encoding BLE-Keying-Material Attribute"}
 
 Type
 
@@ -481,70 +446,15 @@ Type
 
 Length
 
->> \>=56 octet
+>> 6 octet
 
-Peripheral Identity Address
+Data Type
 
+>> string
 
->  The Peripheral Identity Address field is 6 octets in length and
-contains the Peripheral's 6-octet Identity Address.
+Value
 
-Central Identity Address
-
-
->  The Central Identity Address field is 6 octets in length and
-contains the Central's 6-octet Identity Address. If the
-Central Identity Address is not used, it is set to 0.
-
-KM Type
-
-
->  The KM Type field is 2 octets in length and identifies the type of keying material
-included in the Keying Material Data field. This allows
-for multiple keys for different purposes to be present in the same
-attribute. This document defines three values for the KM Type:
-
->>>    0 &nbsp; &nbsp; The Keying Material Data field contains the
-      16-octet Peripheral Identity Resolving Key encrypted using the AES key wrapping process
-      with 128-bit KEK defined in {{RFC3394}}
-
->>>    1  &nbsp; &nbsp; The Keying Material Data field contains the encrypted
-        16-octet Peripheral Identity Resolving Key
-        and the 16-octet Long Term Key generated during an LE Secure Connection bonding procedure.
-        The Peripheral IRK is passed as input P1 and P2 and the Long Term Key is passed as input P3 and P4
-        in the AES key wrapping process with 128-bit KEK defined in {{RFC3394}}.
-
->>>    2 &nbsp; &nbsp;  The Keying Material Data field contains the 16-octet Peripheral Identity Resolving Key,
-        the 16-octet Long Term Key generated during an LE Secure Connection bonding procedure and the
-        16-octet Central Identity Resolving Key. The Peripheral IRK is passed as input P1 and P2,
-        the Long Term Key is passed as input P3 and P4 and the Central IRK is passed as input P5 and P6
-        in the AES key wrapping process with 128-bit KEK defined in {{RFC3394}}.
-
-  KEK ID
-
-> The KEK ID field is 16 octets in length.  The combination of the
-KEK ID and the RADIUS client and server IP addresses together uniquely
-identify a key shared between the RADIUS client and server.  As a
-result, the KEK ID need not be globally unique.  The KEK ID MUST
-refer to an encryption key for use with the AES Key Wrap with
-128-bit KEK algorithm {{RFC3394}} .  This key is used to protect
-the contents of the Keying Material Data field (below).  
-The KEK ID is a constant that is configured
-through an out-of-band mechanism.  The same value is configured on
-both the RADIUS client and server.  If no KEK ID is configured,
-then the field is set to 0.  If only a single KEK is configured
-for use between a given RADIUS client and server, then 0 can be
-used as the default value.
-
-  IV
-
-> The IV field is 8-octets in length and its value
-MUST be as specified in {{RFC3394}} .
-
-  Keying Material Data
-
-> The Keying Material Data field is of variable length and contains
-the actual encrypted keying material as identified using the KM Type field.
+>  The string encodes a data structure containing Bluetooth Identity Address(es), a key-encryption key and Bluetooth keying material, as specified in {{BKMDS}}.
 
 
 Forwarding Bluetooth Messages
@@ -1289,9 +1199,107 @@ Peripheral            Host                    Server          Broker
 ~~~~~~~~~~
 {: #figdisc title="MQTT Exchange when disconnecting from a connected BLE Peripheral"}
 
+#  BLE-Keying-Material Data Structure {#BKMDS}
+
+This section describes the BLE-Keying-Material Data Structure. It is intended to move this material to another document - but is included here to describe the encoding of Identity Address(es) and cryptographic material.
+
+
+
+~~~~~~~~~~
+0                   1                   2                   3
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                  Peripheral Identity Address    
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      Peripheral IA (cont'd)    |    Central Identity Address
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                 Central Identity Address (cont'd)              |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|           KM Type             |             KEK ID
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                             KEK ID
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                         KEK ID (cont'd)
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                         KEK ID (cont'd)
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        KEK ID (cont'd)         |                 IV
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                           IV (cont'd)
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+          IV (cont'd)           |       Keying Material Data
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                  Keying Material Data (cont'd)
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+~~~~~~~~~~
+{: #ds-pkm title="Encoding BLE-Keying-Material Data Structure"}
+
+
+Peripheral Identity Address
+
+
+>  The Peripheral Identity Address field is 6 octets in length and
+contains the Peripheral's 6-octet Identity Address.
+
+Central Identity Address
+
+
+>  The Central Identity Address field is 6 octets in length and
+contains the Central's 6-octet Identity Address. If the
+Central Identity Address is not used, it is set to 0.
+
+KM Type
+
+
+>  The KM Type field is 2 octets in length and identifies the type of keying material
+included in the Keying Material Data field. This allows
+for multiple keys for different purposes to be present in the same
+attribute. This document defines three values for the KM Type:
+
+>>>    0 &nbsp; &nbsp; The Keying Material Data field contains the
+      16-octet Peripheral Identity Resolving Key encrypted using the AES key wrapping process
+      with 128-bit KEK defined in {{RFC3394}}
+
+>>>    1  &nbsp; &nbsp; The Keying Material Data field contains the encrypted
+        16-octet Peripheral Identity Resolving Key
+        and the 16-octet Long Term Key generated during an LE Secure Connection bonding procedure.
+        The Peripheral IRK is passed as input P1 and P2 and the Long Term Key is passed as input P3 and P4
+        in the AES key wrapping process with 128-bit KEK defined in {{RFC3394}}.
+
+>>>    2 &nbsp; &nbsp;  The Keying Material Data field contains the 16-octet Peripheral Identity Resolving Key,
+        the 16-octet Long Term Key generated during an LE Secure Connection bonding procedure and the
+        16-octet Central Identity Resolving Key. The Peripheral IRK is passed as input P1 and P2,
+        the Long Term Key is passed as input P3 and P4 and the Central IRK is passed as input P5 and P6
+        in the AES key wrapping process with 128-bit KEK defined in {{RFC3394}}.
+
+  KEK ID
+
+> The KEK ID field is 16 octets in length.  The combination of the
+KEK ID and the RADIUS client and server IP addresses together uniquely
+identify a key shared between the RADIUS client and server.  As a
+result, the KEK ID need not be globally unique.  The KEK ID MUST
+refer to an encryption key for use with the AES Key Wrap with
+128-bit KEK algorithm {{RFC3394}} .  This key is used to protect
+the contents of the Keying Material Data field (below).  
+The KEK ID is a constant that is configured
+through an out-of-band mechanism.  The same value is configured on
+both the RADIUS client and server.  If no KEK ID is configured,
+then the field is set to 0.  If only a single KEK is configured
+for use between a given RADIUS client and server, then 0 can be
+used as the default value.
+
+  IV
+
+> The IV field is 8-octets in length and its value
+MUST be as specified in {{RFC3394}} .
+
+  Keying Material Data
+
+> The Keying Material Data field is of variable length and contains
+the actual encrypted keying material as identified using the KM Type field.
 
 # Acknowledgements {#Acknowledgements}
 {: numbered="false"}
 
-Thanks to Oleg Pekar and Eric Vyncke for their review comments. The definition of the
-BLE-Keying-Material attribute has been inspired by {{RFC6218}}.
+Thanks to Oleg Pekar and Eric Vyncke for their review comments.
