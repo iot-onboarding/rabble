@@ -40,9 +40,11 @@ normative:
   RFC2119:
   RFC2865:
   RFC3580:
+  RFC4868:
   RFC8174:
   RFC6455:
   RFC5580:
+  RFC6929:
   I-D.draft-dekok-radext-deprecating-radius:
 
 informative:
@@ -308,14 +310,6 @@ where the first string character represents the most significant
 hexadecimal digit, i.e., a prand value of 0x035fb2 is encoded as "035FB2".
 
 
-User-Password
---------------
-
-Contains a 6 character ASCII upper-case string corresponding to the
-hexadecimal encoding of the 24 bit hash derived from the Bluetooth Resolvable Private Address,
-where the first string character represents the most significant
-hexadecimal digit.
-
 
 NAS-IP-Address, NAS-IPv6-Address
 --------------
@@ -391,18 +385,61 @@ NAS-Port-Type {#NPT}
 TBA1:  "Wireless - Bluetooth Low Energy"
 
 
-Message-Authenticator
----------------
+Hashed-Password {#hashedpassword}
+--------------
 
-The Message-Authenticator attribute MUST be used to protect
-any packets that include the BLE-Keying-Material attribute.
+Description
+
+The Hashed-Password (TBA2) Attribute allows a RADIUS
+client to include a key and hashed password.
+
+
+Type
+
+>> TBA2
+
+Length
+
+>> 6 octet
+
+Data Type
+
+>> TLV
+
+Value
+
+The TLV data type is specified in {{RFC6929}}. Two TLV-Types are defined
+for use with the Hashed-Password Attribute.
+
+TLV-Type
+
+>> 0 (hmac-sha256-128-key)
+
+TLV-Value:
+
+>> A lower case hexadecimal string representation of a 256-bit key.
+
+TLV-Type
+
+>> 1 (hmac-sha256-128-password)
+
+TLV-Value:
+
+>> The 128-bit truncated output of the HMAC-SHA-256-128 algorithm {{RFC4868}} where the input data
+corresponds to the 24-bit hash recovered from the Bluetooth Resolvable Private Address
+and the key corresponds to the value of the TLV-Type hmac-sha256-128-key.
+
+Two instances of the Hashed-Password Attributes MUST be included in
+an Access-Request packet. One instance MUST correspond to the TLV-Type 0 and
+one instance MUST correspond to the TLV-Type 1.
+
 
 GATT-Service-Profile {#GSP}
 --------------
 
 Description
 
-The GATT-Service-Profile (TBA2) Attribute allows a RADIUS
+The GATT-Service-Profile (TBA3) Attribute allows a RADIUS
 client to include one or more GATT Service Profiles which are advertised
 by the BLE Peripheral.
 
@@ -412,7 +449,7 @@ an Access-Request packet.
 
 Type
 
->> TBA2
+>> TBA3
 
 Length
 
@@ -432,7 +469,7 @@ BLE-Keying-Material {#BPKM}
 
 Description
 
-The BLE-Keying-Material (TBA3) Attribute allows the
+The BLE-Keying-Material (TBA4) Attribute allows the
 transfer of Identity Address(es) and cryptographic keying material from a
 RADIUS Server to the BLE Visited Central Host. It can be treated as
 opaque data by the RADIUS Server.
@@ -442,7 +479,7 @@ an Access-Accept packet.
 
 Type
 
->> TBA3
+>> TBA4
 
 Length
 
@@ -467,7 +504,7 @@ transferred between the BLE Visited Central Host and a Home MQTT Broker.
 
 Description
 
-The MQTT-Broker-URI (TBA4) Attribute allows a RADIUS
+The MQTT-Broker-URI (TBA5) Attribute allows a RADIUS
 server to specify the URI of the MQTT Broker.
 A single MQTT-Broker-URI Attributes MAY be included in
 an Access-Accept packet.
@@ -481,7 +518,7 @@ that supports the 'mqtt' Sec-WebSocket-Protocol.
 
 Type
 
->> TBA4
+>> TBA5
 
 Length
 
@@ -500,7 +537,7 @@ MQTT service can be accessed, e.g., "wss://broker.example.com:443".
 
 Description
 
-The MQTT-Token (TBA5) Attribute allows a RADIUS server
+The MQTT-Token (TBA6) Attribute allows a RADIUS server
 signal a token for use by an MQTT client in an MQTT CONNECT packet {{MQTT}}.
 The token can be used by an MQTT Broker to associate an MQTT Connection from an
 MQTT Client with a Network Access Server.
@@ -510,7 +547,7 @@ an Access-Accept packet.
 
 Type
 
->> TBA5
+>> TBA6
 
 Length
 
@@ -681,10 +718,11 @@ The following table provides a guide to which of the attribute defined
 may be found in which kinds of packets, and in what quantity.
 
 | Request | Accept | Reject | Challenge| Acct-Request| \#  | Attribute |
-| 0+   | 0     | 0    | 0 | 0  | TBA1 | GATT-Service-Profile |
-| 0   | 1     | 0    | 0 | 0  | TBA2 | BLE-Keying-Material|
-| 0   | 0-1     | 0    | 0 | 0  | TBA3 | MQTT-Broker-URI |
-| 0   | 0-1     | 0    | 0 | 0  | TBA4 | MQTT-Token |
+| 1+   | 0     | 0    | 0 | 0  | TBA2 | Hashed-Password |
+| 0+   | 0     | 0    | 0 | 0  | TBA3 | GATT-Service-Profile |
+| 0   | 1     | 0    | 0 | 0  | TBA4 | BLE-Keying-Material|
+| 0   | 0-1     | 0    | 0 | 0  | TBA5 | MQTT-Broker-URI |
+| 0   | 0-1     | 0    | 0 | 0  | TBA6 | MQTT-Token |
 {: title="Table of Attributes"}
 
 The following table defines the meaning of the above table entries.
@@ -733,10 +771,11 @@ This document defines a new value of TBA1 for RADIUS Attribute Type #61 (NAS-Por
 This document defines new RADIUS attributes, (see section {{profile}}), and assigns values of TBA2, TBA3, TBA4, and TBA5 from the RADIUS Attribute Type space https://www.iana.org/assignments/radius-types.
 
 | Tag  | Attribute | Reference |
-| TBA2 | GATT-Service-Profile |  {{GSP}} |
-| TBA3 | BLE-Keying-Material| {{BPKM}} |
-| TBA4 | MQTT-Broker-URI |  {{MBU}} |
-| TBA5 | MQTT-Token |  {{MT}} |
+| TBA2 | Hashed-Password |  {{hashedpassword}} |
+| TBA3 | GATT-Service-Profile |  {{GSP}} |
+| TBA4 | BLE-Keying-Material| {{BPKM}} |
+| TBA5 | MQTT-Broker-URI |  {{MBU}} |
+| TBA6 | MQTT-Token |  {{MT}} |
 {: title="New RADIUS attributes defined in this document"}
 
 
