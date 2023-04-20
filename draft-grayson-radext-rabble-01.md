@@ -393,14 +393,13 @@ Description
 The Hashed-Password (TBA2) Attribute allows a RADIUS
 client to include a key and hashed password.
 
-
 Type
 
 >> TBA2
 
 Length
 
->> 6 octet
+>> Variable
 
 Data Type
 
@@ -408,30 +407,35 @@ Data Type
 
 Value
 
-The TLV data type is specified in {{RFC6929}}. Two TLV-Types are defined
+>  The TLV data type is specified in {{RFC6929}}. Two TLV-Types are defined
 for use with the Hashed-Password Attribute.
 
 TLV-Type
 
->> 0 (hmac-sha256-128-key)
+>> 0 (Hashed-Password.Hmac-Sha256-128-Key)
 
 TLV-Value:
 
->> A lower case hexadecimal string representation of a 256-bit key.
+>  A lower case hexadecimal string representation of a random 256-bit key. The
+value SHOULD satisfy the requirements of {{RFC4086}}. A new key value MUST be used
+whenever the value of Hashed-Password.Hmac-Sha256-128-Password is changed. The key MUST not be changed
+when a message is being retransmitted.
 
 TLV-Type
 
->> 1 (hmac-sha256-128-password)
+>> 1 (Hashed-Password.Hmac-Sha256-128-Password)
 
 TLV-Value:
 
->> The 128-bit truncated output of the HMAC-SHA-256-128 algorithm {{RFC4868}} where the input data
+>  A lower case hexadecimal string representation of the 128-bit truncated output
+of the HMAC-SHA-256-128 algorithm {{RFC4868}} where the input data
 corresponds to the 24-bit hash recovered from the Bluetooth Resolvable Private Address
-and the key corresponds to the value of the TLV-Type hmac-sha256-128-key.
+and the key corresponds to the value of the TLV-Type Hashed-Password.Hmac-Sha256-128-Key.
 
-Two instances of the Hashed-Password Attributes MUST be included in
-an Access-Request packet. One instance MUST correspond to the TLV-Type 0 and
-one instance MUST correspond to the TLV-Type 1.
+Two instances of the Hashed-Password Attribute MUST be included in
+an Access-Request packet. One instance MUST correspond to the TLV-Type 0
+(Hashed-Password.Hmac-Sha256-128-Key) and
+one instance MUST correspond to the TLV-Type 1 (Hashed-Password.Hmac-Sha256-128-Password).
 
 
 GATT-Service-Profile {#GSP}
