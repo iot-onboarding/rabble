@@ -2,7 +2,7 @@
 title: RADIUS profile for Bonded Bluetooth Low Energy peripherals
 abbrev: RABBLE
 docname: draft-grayson-radext-rabble-01
-date: 2023-04-19
+date: 2023-04-26
 category: std
 submissiontype: IETF
 
@@ -40,6 +40,7 @@ normative:
   RFC2119:
   RFC2865:
   RFC3580:
+  RFC4086:
   RFC4868:
   RFC8174:
   RFC6455:
@@ -87,7 +88,7 @@ device to operate with a second "visited" Bluetooth Low Energy Central device
 that is integrated with a Network Access Server.
 
 After being successfully authenticated, a signalling link is established
-that enables Bluetooth messages advertized by the BLE Peripheral to be forwarded
+that enables Bluetooth messages advertised by the BLE Peripheral to be forwarded
 from the Visited Bluetooth Low Energy Central device to a Home MQTT Broker.
 For connectable BLE Peripherals, the signalling link enables the Home MQTT
 Broker to send BLE Requests or Commands to the Visited Bluetooth Low Energy
@@ -121,7 +122,7 @@ BLE Central Host:
 
 BLE Peripheral Device:
 
-  A BLE device that is configured to repeatedly send advertizing messages.  
+  A BLE device that is configured to repeatedly send advertising messages.  
 
 BLE Security Database:
 
@@ -138,13 +139,13 @@ Bonding:
   a Bluetooth Central device and a Bluetooth Peripheral device which generates session keying material that is expected
   to be stored by both Bluetooth devices, to be used for future authentication.
 
-hash:
+Hash:
 
   A Bluetooth {{BLUETOOTH}} specified 24-bit hash value which is calculated using a
   hash function operating on IRK and prand as its input parameters. The hash is encoded
   in the 24 least significant bits of a Resolvable Private Address.
 
-home:
+Home:
 
   A network that has access to the keying material necessary to support the pairing of a
   BLE peripheral and that is able to expose the keys generated as part of the BLE bonding
@@ -407,8 +408,12 @@ Data Type
 
 Value
 
->  The TLV data type is specified in {{RFC6929}}. Two TLV-Types are defined
-for use with the Hashed-Password Attribute.
+>  The TLV data type is specified in {{RFC6929}} and its value
+is determined by the TLV-Type field.
+Two TLV-Types are defined for use with the Hashed-Password Attribute.
+
+
+### Hashed-Password.Hmac-Sha256-128-Key
 
 TLV-Type
 
@@ -416,10 +421,16 @@ TLV-Type
 
 TLV-Value:
 
->  A lower case hexadecimal string representation of a random 256-bit key. The
+>  A "string" data type encoding binary data representing a random 256-bit key. The
 value SHOULD satisfy the requirements of {{RFC4086}}. A new key value MUST be used
-whenever the value of Hashed-Password.Hmac-Sha256-128-Password is changed. The key MUST not be changed
+whenever the value of Hashed-Password.Hmac-Sha256-128-Password is changed. The key MUST NOT be changed
 when a message is being retransmitted.
+
+TLV-Length:
+
+>> 32 octets
+
+### Hashed-Password.Hmac-Sha256-128-Password
 
 TLV-Type
 
@@ -427,10 +438,16 @@ TLV-Type
 
 TLV-Value:
 
->  A lower case hexadecimal string representation of the 128-bit truncated output
+>  A "string" data type encoding binary data representing the 128-bit truncated output
 of the HMAC-SHA-256-128 algorithm {{RFC4868}} where the input data
 corresponds to the 24-bit hash recovered from the Bluetooth Resolvable Private Address
 and the key corresponds to the value of the TLV-Type Hashed-Password.Hmac-Sha256-128-Key.
+
+TLV-Length:
+
+>> 16 octets
+
+### Hashed-Password TLV-Type Usage
 
 Two instances of the Hashed-Password Attribute MUST be included in
 an Access-Request packet. One instance MUST correspond to the TLV-Type 0
@@ -461,41 +478,186 @@ Length
 
 Data Type
 
->> integer
+>> Integer
 
 Value
 
 >  The field is 4 octets, containing a 32-bit unsigned integer that
 represents a GATT Service Profile.
 
-BLE-Keying-Material {#BPKM}
---------------
+##  BLE-Keying-Material Attribute {#BPKM}
 
 Description
 
-The BLE-Keying-Material (TBA4) Attribute allows the
-transfer of Identity Address(es) and cryptographic keying material from a
-RADIUS Server to the BLE Visited Central Host. It can be treated as
-opaque data by the RADIUS Server.
-
-A single BLE-Keying-Material Attributes MUST be included in
-an Access-Accept packet.
+The BLE-Keying-Material (TBA3) Attribute allows the transfer of
+Identity Address(es) and cryptographic keying material from a RADIUS
+Server to the BLE Visited Central Host.
 
 Type
 
->> TBA4
+>> TBA3
 
 Length
 
->> 6 octet
+>> Variable
 
 Data Type
 
->> string
+>> TLV
 
 Value
 
->  The string encodes a data structure containing Bluetooth Identity Address(es), a key-encryption key and Bluetooth keying material, as specified in {{BKMDS}}.
+>  The TLV data type is specified in {{RFC6929}} and its value is
+determined by the TLV-Type field. Five TLV-Types are defined
+for use with the BLE-Keying-Material Attribute.
+
+### BLE-Keying-Material.Peripheral-IA
+
+TLV-Type
+
+>> 0 (BLE-Keying-Material.Peripheral-IA)
+
+TLV-Value:
+
+>  A "string" data type encoding binary data representing
+the Peripheral's 6-octet Identity Address.
+
+TLV-Length:
+
+>  6 octets
+
+### BLE-Keying-Material.Central-IA
+
+TLV-Type
+
+>> 1 (BLE-Keying-Material.Central-IA)
+
+TLV-Value:
+
+>  A "string" data type encoding binary data representing
+the Central's 6-octet Identity Address.
+
+TLV-Length:
+
+>  6 octets
+
+### BLE-Keying-Material.IV
+
+TLV-Type
+
+>> 2 (BLE-Keying-Material.IV)
+
+TLV-Value:
+
+>  A "string" data type encoding binary data representing
+an 8-octet initialization vector. The value MUST be as
+specified in {{RFC3394}}.
+
+TLV-Length:
+
+>  8 octets
+
+### BLE-Keying-Material.KEK-ID
+
+TLV-Type
+
+>> 3 (BLE-Keying-Material.KEK-ID)
+
+TLV-Value:
+
+>   A "string" data type encoding binary data representing
+the identity of a Key Encryption Key (KEK).
+The combination of the BLE-Keying-Material.KEK-ID value
+and the RADIUS client and server IP addresses together
+uniquely identify a key shared between the RADIUS client and
+server.  As a result, the BLE-Keying-Material.KEK-ID need
+not be globally unique.  The BLE-Keying-Material.KEK-ID
+MUST refer to an encryption key for use with the AES Key
+Wrap with 128-bit KEK algorithm {{RFC3394}}.  
+This key is used to protect the contents of the BLE-Keying-Material.KM-Data TLV
+(see {{KMdataltv}}).
+
+>   The BLE-Keying-Material.KEK-ID is a constant that is configured through an out-of-band
+mechanism.  The same value is configured on both the RADIUS client
+and server.  If no BLE-Keying-Material.KEK-ID is configured, then the field is set to
+0.  If only a single KEK is configured for use between a given
+RADIUS client and server, then 0 can be used as the default value.
+
+TLV-Length:
+
+>  16 octets
+
+### BLE-Keying-Material.KM-Type
+
+TLV-Type:
+
+>> 4 (BLE-Keying-Material.KM-Type)
+
+TLV-Value:
+
+>  An "integer" data type
+identifying the type of keying material included in the BLE-Keying-Material.KM-Data TLV.  
+This allows for multiple keys for different purposes to be present in
+the same attribute.  This document defines three values for the
+The BLE-Keying-Material.KM-Type
+
+>>>    0 &nbsp; &nbsp; The BLE-Keying-Material.KM-Data TLV contains the
+      16-octet Peripheral Identity Resolving Key encrypted using the AES key wrapping process
+      with 128-bit KEK defined in {{RFC3394}}
+
+>>>    1  &nbsp; &nbsp; The BLE-Keying-Material.KM-Data TLV contains the encrypted
+        16-octet Peripheral Identity Resolving Key
+        and the 16-octet Long Term Key generated during an LE Secure Connection bonding procedure.
+        The Peripheral IRK is passed as input P1 and P2 and the Long Term Key is passed as input P3 and P4
+        in the AES key wrapping process with 128-bit KEK defined in {{RFC3394}}.
+
+>>>    2 &nbsp; &nbsp;  The BLE-Keying-Material.KM-Data TLV contains the 16-octet Peripheral Identity Resolving Key,
+        the 16-octet Long Term Key generated during an LE Secure Connection bonding procedure and the
+        16-octet Central Identity Resolving Key. The Peripheral IRK is passed as input P1 and P2,
+        the Long Term Key is passed as input P3 and P4 and the Central IRK is passed as input P5 and P6
+        in the AES key wrapping process with 128-bit KEK defined in {{RFC3394}}.
+
+TLV-Length:
+
+>  4 octets
+
+### BLE-Keying-Material.KM-Data {#KMdataltv}
+
+TLV-Type:
+
+>> 5 (BLE-Keying-Material.KM-Data)
+
+TLV-Value:
+
+>  A "string" data type encoding binary data representing
+the actual encrypted keying material as identified using the
+BLE-Keying-Material.KM-Type.
+
+TLV-Length:
+
+>  Variable
+
+### BLE-Keying-Material TLV-Type Usage
+
+At least four instances of the BLE-Keying-Material Attribute MUST be included in
+an Access-Accept packet, that include the following TLV-Types:
+
+* TLV-Type 0 (BLE-Keying-Material.Peripheral-IA)
+* TLV-Type 2 (BLE-Keying-Material.IV)
+* TLV-Type 4 (BLE-Keying-Material.KM-Type)
+* TLV-Type 5 (BLE-Keying-Material.KM-Data)
+
+If a KEK is configured, then in addition the Access-Accept
+packet MUST include the BLE-Keying-Material Attribute with an instance of
+TLV-Type 3 (BLE-Keying-Material.KEK-ID). When not present, the NAS MUST
+use a default value of 0 for the KEK-ID.
+
+If the BLE Peripheral is connectable and the RADIUS Server authorizes connections,
+then in addition the Access-Accept message MUST include the
+BLE-Keying-Material Attribute with an instance of
+TLV-Type 1 (BLE-Keying-Material.Central-IA).
+
+
 
 
 Forwarding Bluetooth Messages
@@ -517,7 +679,7 @@ If the RADIUS server operates with NAS/BLE Visited Hosts
 that are deployed behind firewalls or NAT gateways,
 MQTT Messages SHOULD be transported using WebSocket
 {{RFC6455}} as a network transport as defined in MQTT {{MQTT}} and the
-the attribute SHOULd specify the URI of a WebSocket server
+the attribute SHOULD specify the URI of a WebSocket server
 that supports the 'mqtt' Sec-WebSocket-Protocol.
 
 Type
@@ -542,7 +704,7 @@ MQTT service can be accessed, e.g., "wss://broker.example.com:443".
 Description
 
 The MQTT-Token (TBA6) Attribute allows a RADIUS server
-signal a token for use by an MQTT client in an MQTT CONNECT packet {{MQTT}}.
+to signal a token for use by an MQTT client in an MQTT CONNECT packet {{MQTT}}.
 The token can be used by an MQTT Broker to associate an MQTT Connection from an
 MQTT Client with a Network Access Server.
 
@@ -563,7 +725,7 @@ Data Type
 
 Value
 
->  The String field is encoded in UTF-8 and contains a token for use
+>  The String field is contains a token for use
 with an MQTT CONNECT packet.
 
 
@@ -595,10 +757,6 @@ This attribute indicates how the session was terminated, as described
 in {{RFC2866}}. When the idle-timeout attribute is used by the NAS/BLE Visited Host to
 terminate a RADIUS Accounting session, it MUST set the Acct-Terminate-Cause set to Lost Carrier (2).
 
-### Acct-Multi-Session-Id
-
-This attribute is not not used by BLE Authenticators.
-
 
 BLE RADIUS Exchange {#ops}
 ==================
@@ -613,36 +771,39 @@ advertising events.
 The BLE Peripheral moves into coverage of a second BLE Central device that is integrated with a NAS.
 
 The BLE Peripheral sends Advertisements using its Resolvable Public Address.
-The contents of the Advertizements are signalled to a BLE Visited Central Host associated with the
+The contents of the Advertisements are signalled to a BLE Visited Central Host associated with the
 second BLE Central device. The received Advertisements sent by the
 BLE Peripheral are used by the
 BLE Visited Central Host to decide whether to trigger a RADIUS exchange,  e.g., using the presence
 and/or contents of specific Advertising Elements.
 
-The NAS associated with the BLE Visited Central Host is provisioned with the identity of the RADIUS server.
+The NAS associated with the BLE Visited Central Host is configured with the identity of the RADIUS server.
 The NAS/BLE Visited Host MAY be statically configured with the identity of a RADIUS Server. Alternatively,
-the NAS/BLE Visited Host MAY use the contents of an Advertizement Element received from the BLE Peripheral
+the NAS/BLE Visited Host MAY use the contents of an Advertisement Element received from the BLE Peripheral
 to derive an FQDN of the RADIUS sever and use RFC 7585 {{RFC7585}} to dynamically resolve the address of the RADIUS
-server. For example, the peripheral can use the Bluetooth URI data type Advertizement Element (0x24) to encode
+server. For example, the peripheral can use the Bluetooth URI data type Advertisement Element (0x24) to encode
 the Bluetooth defined 'empty scheme' name tag together with a hostname that
 identifies the network which operates the BLE Home Central Host associated with the peripheral.
 Alternatively, a federation of operators of BLE Visited Centrals and
-RADIUS Servers can define the use of the Bluetooth defined Manufacturer Specific Advertizement Data Element (0xFF) together with
+RADIUS Servers can define the use of the Bluetooth defined Manufacturer Specific Advertisement Data Element (0xFF) together with
 a Company Identifier that identifies the federation to signal a federation defined sub-type that encodes information that
-enables the BLE Visited Central Host to derive an FQDN of the RADIUS sever associated with the advertizing peripheral.
+enables the BLE Visited Central Host to derive an FQDN of the RADIUS sever associated with the advertising peripheral.
 
 The NAS/BLE Host generates a RADIUS Access-Request message using the prand
-from the RPA as the User-Name attribute and the hash from the RPA as the User-Password attribute.
+from the RPA as the User-Name attribute and the hash from the RPA to generate the
+TLV-Type "Hashed-Password.Hmac-Sha256-128-Password".
 The NAS-Port-Type is set to "Wireless - Bluetooth Low Energy".
 
 On receiving the RADIUS Access-Request message, the RADIUS Server uses the keying material exposed by the
 BLE Home Central Host and attempts to resolve the
-User-Name and User-Password to a known BLE Identity Address (IA).  If the RADIUS Server cannot resolve the User-Name
-and User-Password to a known BLE Identity Address, the RADIUS server MUST reject the Access-Request.
+User-Name and the TLV-Type "Hashed-Password.Hmac-Sha256-128-Password" to a known BLE Identity Address (IA).  If the RADIUS Server cannot resolve the User-Name
+and TLV-Type "Hashed-Password.Hmac-Sha256-128-Password" to a known BLE
+Identity Address, the RADIUS server MUST reject the Access-Request.
 
-If the RADIUS Server resolves the User-Name and User-Password to a known BLE Identity Address, and the BLE Identity Address is authorized to access via the BLE Visited Host, the RADIUS server recovers the session specific keying material exposed by the
+If the RADIUS Server resolves the User-Name and TLV-Type "Hashed-Password.Hmac-Sha256-128-Password" to a known BLE Identity Address, and the BLE Identity Address is authorized to access via the BLE Visited Host, the RADIUS server recovers the session specific keying material exposed by the
 BLE Home Central Host.
 
+(Editor's note - update if/when ncoding switched to TLV)
 If the BLE Peripheral is not connectable or connections are not authorized, the RADIUS server encodes the Peripheral Identity Address and the Peripheral Identity Resolving Key in the BLE-Keying-Material attribute and sets the KM Type to 0.
 If the BLE Peripheral is connectable and connections are authorized via the BLE Visited Host, the RADIUS server
 additionally includes the Central Identity Address and the Long Term Key in the BLE-Keying-Material attribute and sets the KM Type to 1. Finally, if the BLE Peripheral is connectable and connections are authorized via the BLE Visited Host and the security database indicates that the BLE Home Central Host operates using Bluetooth privacy,
@@ -658,57 +819,57 @@ The NAS/BLE Visited Host SHOULD include its NAS-Id in the User Name field of the
 and MAY include an Operator Name, if for example the NAS has been configured with the operator-name attribute (#126) as
 specified in RFC5580 {{RFC5580}}.
 
-If the advertizement that triggered the RADIUS exchange corresponds to an ADV_IND then the
+If the advertisement that triggered the RADIUS exchange corresponds to an ADV_IND then the
 NAS/BLE Visited Host can subsequently establish a secure connection with the BLE Peripheral.
 
 ~~~~~~~~~~
-                    NAS/BLE                                                                                                                
-                    Visited                    Home            Home       
-   BLE             Central#2                  RADIUS           MQTT   
-Peripheral           Host                     Server          Broker
-    |                  |                         |              |  
-    |                  |                         |              |
-    |--BLE ----------->|                         |              |  
-    |  Advertizement   |                         |              |
-    |                  |                         |              |
-    |<---------------->|                         |              |
-    |  Active Scan     |-  Access-Request------->|              |      
-    |                  |  user-name=prand        |              |  
-    |                  |  user-password=hash     |              |   
-    |                  |  NAS-Port-Type=BLE      |              |  
-    |                  |  GATT-Service-Profile   |              |
-    |                  |                         |              |   
-    |                  |<  Access-Accept---------|              |    
-    |                  |  Idle-Timeout           |              |  
-    |                  |  BLE-Keying-Material    |              |  
-    |                  |  MQTT-Broker-URI        |              |  
-    |                  |  MQTT-Token             |              |
-    |                  |                         |              |   
-    |                  |---Accounting-Request--->|              |   
-    |                  |  Acct-Status-Type=Start |              |   
-    |                  |  Session-Id             |              |   
-    |                  |                         |              |  
-    |                  |---MQTT CONNECT------------------------>|   
-    |                  |  User Name=[operator_name:]nas-id      |  
-    |                  |  Password=MQTT Token    |              |    
-    |                  |                         |              |   
-    |                  |---MQTT PUBLISH------------------------>|  
-    |                  |  Advertizement(s)       |              |  
-    |                  |                         |              |  
-   +-------------------------------------------------------------+
-   |          Further MQTT and associated BLE Exchanges          |    
-   +-------------------------------------------------------------+  
-    |                  |                         |              |  
-    |--BLE ----------->|--+ Resolve to           |              |  
-    |  Advertizement   |  | same Identity        |              |
-    |                  |<-+ Address              |              |  
-    |               +--|                         |              |  
-    |               |  |                         |              |   
-    |               +->|Idle Timer Expiry        |              |  
-    |                  |                         |              |     
-    |                  |---Accounting-Request--->|              |
-    |                  |  Acct-Status-Type=Stop  |              |    
-    |                  |  Session-Id             |              |  
+                   NAS/BLE                                                                                                                
+                   Visited                   Home            Home       
+   BLE            Central#2                 RADIUS           MQTT   
+Peripheral          Host                    Server          Broker
+    |                 |                        |              |  
+    |                 |                        |              |
+    |--BLE----------->|                        |              |  
+    |  Advertisement  |                        |              |
+    |                 |                        |              |
+    |<--------------->|                        |              |
+    |  Active Scan    |--Access-Request------->|              |      
+    |                 | User-Name=prand        |              |  
+    |                 | Hashed-Password.Hmac-Sha256-128-Password=hash
+    |                 | NAS-Port-Type=BLE      |              |  
+    |                 | GATT-Service-Profile   |              |
+    |                 |                        |              |   
+    |                 |<-Access-Accept---------|              |    
+    |                 | Idle-Timeout           |              |  
+    |                 | BLE-Keying-Material    |              |  
+    |                 | MQTT-Broker-URI        |              |  
+    |                 | MQTT-Token             |              |
+    |                 |                        |              |   
+    |                 |--Accounting-Request--->|              |   
+    |                 | Acct-Status-Type=Start |              |   
+    |                 | Session-Id             |              |   
+    |                 |                        |              |  
+    |                 |--MQTT CONNECT------------------------>|   
+    |                 | User Name=[operator_name:]nas-id      |  
+    |                 | Password=MQTT Token    |              |    
+    |                 |                        |              |   
+    |                 |--MQTT PUBLISH------------------------>|  
+    |                 | Advertisement(s)       |              |  
+    |                 |                        |              |  
+   +-----------------------------------------------------------+
+   |         Further MQTT and associated BLE Exchanges         |    
+   +-----------------------------------------------------------+  
+    |                 |                        |              |  
+    |--BLE ---------->|--+ Resolve to          |              |  
+    |  Advertisement  |  | same Identity       |              |
+    |                 |<-+ Address             |              |  
+    |              +--|                        |              |  
+    |              |  |                        |              |   
+    |              +->|Idle Timer Expiry       |              |  
+    |                 |                        |              |     
+    |                 |--Accounting-Request--->|              |
+    |                 | Acct-Status-Type=Stop  |              |    
+    |                 | Session-Id             |              |  
 
 ~~~~~~~~~~
 {: #figops title="BLE RADIUS Exchange"}
@@ -724,7 +885,7 @@ may be found in which kinds of packets, and in what quantity.
 | Request | Accept | Reject | Challenge| Acct-Request| \#  | Attribute |
 | 1+   | 0     | 0    | 0 | 0  | TBA2 | Hashed-Password |
 | 0+   | 0     | 0    | 0 | 0  | TBA3 | GATT-Service-Profile |
-| 0   | 1     | 0    | 0 | 0  | TBA4 | BLE-Keying-Material|
+| 0   | 1+     | 0    | 0 | 0  | TBA4 | BLE-Keying-Material|
 | 0   | 0-1     | 0    | 0 | 0  | TBA5 | MQTT-Broker-URI |
 | 0   | 0-1     | 0    | 0 | 0  | TBA6 | MQTT-Token |
 {: title="Table of Attributes"}
@@ -772,7 +933,7 @@ This document defines a new value of TBA1 for RADIUS Attribute Type #61 (NAS-Por
 | TBA1|"Wireless - Bluetooth Low Energy"| {{NPT}} |
 {: title="New NAS-Port-Type value defined in this document"}
 
-This document defines new RADIUS attributes, (see section {{profile}}), and assigns values of TBA2, TBA3, TBA4, and TBA5 from the RADIUS Attribute Type space https://www.iana.org/assignments/radius-types.
+This document defines new RADIUS attributes, (see section {{profile}}), and assigns values of TBA2, TBA3, TBA4, TBA5 and TBA6 from the RADIUS Attribute Type space https://www.iana.org/assignments/radius-types.
 
 | Tag  | Attribute | Reference |
 | TBA2 | Hashed-Password |  {{hashedpassword}} |
@@ -787,6 +948,8 @@ This document defines new RADIUS attributes, (see section {{profile}}), and assi
 
 --- back
 
+
+
 #  MQTT Interworking
 
 This section describes how a NAS/BLE Visited Host supporting the BLE RADIUS profile can interwork with a Home MQTT Message Broker in order to use MQTT topics to deliver Bluetooth messages to/from a BLE Peripheral. It is intended to move this material to another document - but is included here to describe, at a high level, the MQTT interworking established by the RADIUS exchange.
@@ -796,34 +959,34 @@ This section describes how a NAS/BLE Visited Host supporting the BLE RADIUS prof
 If the NAS/BLE Visited Host is signalled a MQTT-Broker-URI in an Access-Accept with which it does not have an established MQTT connection, then it MUST establish an MQTT connection. It the NAS/BLE Visited Host is behind a firewall or NAT gateway it MUST use WebSocket transport for the MQTT connection. The user name in the MQTT CONNECT message SHOULD include the NAS-ID and MAY include the name of the operator of the NAS/BLE Visited Host.
 
 ~~~~~~~~~~
-                    NAS/BLE                                   
-                    Visited                    Home            Home       
-   BLE             Central#2                  RADIUS           MQTT  
-Peripheral            Host                    Server          Broker
-    |                  |                         |              |   
-    |                  |                         |              |  
-    |                  |---Accounting-Request--->|              |  
-    |                  |  Acct-Status-Type=Start |              |    
-    |                  |  Session-Id             |              |   
-    |                  |  Chargeable-User-Id     |              |   
-    |                  |                         |              |   
-    |                  |---HTTP GET---------------------------->|  
-    |                  |  Upgrade:websocket      |              |
-    |                  |  Connection:upgrade     |              |  
-    |                  |  Sec-WebSocket-Protocol=mqtt           |  
-    |                  |                         |              |
-    |                  |<--HTTP 101--------------|--------------|  
-    |                  |  Upgrade:websocket      |              |  
-    |                  |  Connection:upgrade     |              |  
-    |                  |  Sec-WebSocket-Protocol=mqtt           |  
-    |                  |                         |              |  
-    |                  |---MQTT CONNECT------------------------>|   
-    |                  |  User Name=[operator_name:]nas-id      |  
-    |                  |  Password=MQTT Token    |              |   
-    |                  |                         |              |   
-    |                  |<--MQTT CONNACK-------------------------|  
-    |                  |                         |              |
-    |                  |                         |              |        
+                   NAS/BLE                                   
+                   Visited                   Home            Home       
+   BLE             Central#2                 RADIUS          MQTT  
+Peripheral           Host                   Server          Broker
+    |                 |                        |              |   
+    |                 |                        |              |  
+    |                 |--Accounting-Request--->|              |  
+    |                 | Acct-Status-Type=Start |              |    
+    |                 | Session-Id             |              |   
+    |                 | Chargeable-User-Id     |              |   
+    |                 |                        |              |   
+    |                 |--HTTP GET---------------------------->|  
+    |                 | Upgrade:websocket      |              |
+    |                 | Connection:upgrade     |              |  
+    |                 | Sec-WebSocket-Protocol=mqtt           |  
+    |                 |                        |              |
+    |                 |<-HTTP 101--------------|--------------|  
+    |                 | Upgrade:websocket      |              |  
+    |                 | Connection:upgrade     |              |  
+    |                 | Sec-WebSocket-Protocol=mqtt           |  
+    |                 |                        |              |  
+    |                 |--MQTT CONNECT------------------------>|   
+    |                 | User Name=[operator_name:]nas-id      |  
+    |                 | Password=MQTT Token    |              |   
+    |                 |                        |              |   
+    |                 |<-MQTT CONNACK-------------------------|  
+    |                 |                        |              |
+    |                 |                        |              |        
 ~~~~~~~~~~
 {: #figest title="Establishing an MQTT connection to a Home Broker using WebSocket transport"}
 
@@ -831,25 +994,23 @@ Peripheral            Host                    Server          Broker
 
 The following topic is used by the MQTT client of the BLE Visited Host to signal active and passive scan advertisements received from BLE Peripherals to the home MQTT Broker.
 
-  1. {peripheral_identity_address}/gatt-ind/advertisement
+* {peripheral_identity_address}/advertisement/gatt-ind
 
 If the BLE Peripheral is connectable, the MQTT client of the BLE Visited Host SHOULD subscribe
 to the following message topics to be able to receive GATT requests from the Home MQTT Broker:
 
-  2. {peripheral_identity_address}/gatt-req/connect : when publishing a message on the {peripheral_identity_address}/gatt-req/connect topic, an MQTT client SHOULD include the following as a response topic
-  {peripheral_identity_address}/gatt-res/connect
-  3. {peripheral_identity_address}/gatt-req/disconnect : when publishing a message on the {peripheral_identity_address}/gatt-req/disconnect topic, an MQTT client SHOULD include the following as a response topic
-  {peripheral_identity_address}/gatt-res/disconnect
-  4. {peripheral_identity_address}/gatt-req/read : when publishing a message on the {peripheral_identity_address}/gatt-req/read topic, an MQTT client  SHOULD include the following as a response topic
-  {peripheral_identity_address}/gatt-res/read
-  5. {peripheral_identity_address}/gatt-req/write : when publishing a message on the {peripheral_identity_address}/gatt-req/write topic, an MQTT client SHOULD include the following as a response topic
-  {peripheral_identity_address}/gatt-res/write
-  6. {peripheral_identity_address}/gatt-req/service-discovery : when publishing a message on the {peripheral_identity_address}/gatt-req/service-discovery topic, an MQTT client SHOULD include the following as a response topic
-  {peripheral_identity_address}/gatt-res/service-discovery
-  7. {peripheral_identity_address}/gatt-req/notification : when publishing a message on the {peripheral_identity_address}/gatt-req/notification topic, an MQTT client SHOULD include the following as a response topic
-  {peripheral_identity_address}/gatt-res/notification. When sending notifications, the MQTT client of the NAS/BLE Visited Host SHOULD publish the
-  message using the topic:{peripheral_identity_address}/gatt-ind/notification. When sending indications, the MQTT client of the NAS/BLE Visited Host
-  SHOULD publish the message using the topic:{peripheral_identity_address}/gatt-ind-req/indication and SHOULD include the following as a response topic {peripheral_identity_address}/gatt-ind-res/indication
+  2. {peripheral_identity_address}/connect/gatt-req : when publishing a message on the {peripheral_identity_address}/connect/gatt-req topic, an MQTT client SHOULD include the following as a response topic
+  {peripheral_identity_address}/connect/gatt-res.
+  3. {peripheral_identity_address}/disconnect/gatt-req : when publishing a message on the {peripheral_identity_address}/disconnect/gatt-req topic, an MQTT client SHOULD include the following as a response topic
+  {peripheral_identity_address}/disconnect/gatt-res.
+  4. {peripheral_identity_address}/read/gatt-req : when publishing a message on the {peripheral_identity_address}/read/gatt-req topic, an MQTT client SHOULD include the following as a response topic
+  {peripheral_identity_address}/read/gatt-res.
+  5. {peripheral_identity_address}/write/gatt-req : when publishing a message on the {peripheral_identity_address}/write/gatt-req topic, an MQTT client SHOULD include the following as a response topic
+  {peripheral_identity_address}/write/gatt-res.
+  6. {peripheral_identity_address}/service-discovery/gatt-req : when publishing a message on the {peripheral_identity_address}/service-discovery/gatt-req topic, an MQTT client SHOULD include the following as a response topic
+  {peripheral_identity_address}/service-discovery/gatt-res.
+  7. {peripheral_identity_address}/notification/gatt-ind-res :  when sending indications, the MQTT client of the NAS/BLE Visited Host
+  SHOULD publish the message using the topic:{peripheral_identity_address}/notification/gatt-ind-req indication and SHOULD include the following as a response topic {peripheral_identity_address}/notification/gatt-ind-res.
 
 
 ## MQTT Exchange for Non-Connectable BLE Peripherals
@@ -863,46 +1024,46 @@ an Accounting-Request message with Acct-Status-Type set to STOP and
 Acct-Terminate-Cause set to Lost Carrier (2).
 
 ~~~~~~~~~~
-                    NAS/BLE                                                                                                                
-                    Visited                                    Home                                                                                 
-   BLE             Central#2                  RADIUS           MQTT                                                                             
-Peripheral            Host                    Server          Broker                                                                            
-    |                  |                         |              |         
-    |--BLE ----------->|                         |              |       
-    |  Advertizement   |                         |              |        
-  +----------------------+                       |              |   
-  | |   Active Scan    | |                       |              |                     
-  | |<-BLE SCAN_REQ----| |                       |              |     
-  | |                  | |                       |              |       
-  | |--BLE SCAN_RSP--->| |                       |              |
-  +----------------------+                       |              |                                                                               
-    |                  |---MQTT PUBLISH------------------------>|                                                                               
-    |                  |  topic:{peripheral_identity_address}/  |                                                                               
-    |                  |  gatt-ind/advertisement |              |                                                                               
-    |                  |  msg:Advertising Report |              |                                                                               
-    |                  |                         |              |                                                                               
-    |--BLE ----------->|                         |              |                                                                               
-    |  Advertizement   |---MQTT PUBLISH------------------------>|                                                                               
-    |               +--|  topic:{peripheral_identity_address}/  |                                                                               
-    |               |  |  gatt-ind/advertisement |              |                                                                               
-    |               |  |  msg:Advertising Report |              |                                                                               
-    |               |  |                         |              |                                                                               
-    |               |  |                         |              |                                                                               
-    |               |  |                         |              |                                                                               
-    |               +->|Idle Timer Expiry        |              |                                                                               
-    |                  |                         |              |                                                                               
-    |                  |---Accounting-Request--->|              |                                                                               
-    |                  |  Acct-Status-Type=Stop  |              |                                                                               
-    |                  |  Session-Id             |              |                                                                               
-    |                  |                         |              |                                                                               
-    |              +------------------------------------------------+                                                                           
-    |              |       Last Session to MQTT Broker Stopped      |                                                                           
-    |              +------------------------------------------------+                                                                           
-    |                  |                                        |                                                                               
-    |                  |---MQTT DISCONNECT--------------------->|                                                                               
-    |                  |                                        |                                                                               
-    |                  |---Close WebSocket--------------------->|                                                                               
-    |                  |                                        |     
+                   NAS/BLE                                                                                                                
+                   Visited                                   Home                                                                                 
+   BLE            Central#2                  RADIUS          MQTT                                                                             
+Peripheral           Host                    Server         Broker                                                                            
+    |                 |                        |              |         
+    |--BLE ---------->|                        |              |       
+    |  Advertisement  |                        |              |        
+  +---------------------+                      |              |   
+  | |   Active Scan   | |                      |              |                     
+  | |<-BLE SCAN_REQ---| |                      |              |     
+  | |                 | |                      |              |       
+  | |--BLE SCAN_RSP-->| |                      |              |
+  +---------------------+                      |              |                                                                               
+    |                 |--MQTT PUBLISH------------------------>|                                                                               
+    |                 | topic:{peripheral_identity_address}/  |                                                                               
+    |                 | advertisement/gatt-ind |              |                                                                               
+    |                 | msg:Advertising Report |              |                                                                               
+    |                 |                        |              |                                                                               
+    |--BLE ---------->|                        |              |                                                                               
+    |  Advertisement  |--MQTT PUBLISH------------------------>|                                                                               
+    |              +--| topic:{peripheral_identity_address}/  |                                                                               
+    |              |  | advertisement/gatt-ind |              |                                                                               
+    |              |  | msg:Advertising Report |              |                                                                               
+    |              |  |                        |              |                                                                               
+    |              |  |                        |              |                                                                               
+    |              |  |                        |              |                                                                               
+    |              +->|Idle Timer Expiry       |              |                                                                               
+    |                 |                        |              |                                                                               
+    |                 |--Accounting-Request--->|              |                                                                               
+    |                 | Acct-Status-Type=Stop  |              |                                                                               
+    |                 | Session-Id             |              |                                                                               
+    |                 |                        |              |                                                                               
+    |             +-----------------------------------------------+                                                                           
+    |             |      Last Session to MQTT Broker Stopped      |                                                                           
+    |             +-----------------------------------------------+                                                                           
+    |                 |                                       |                                                                               
+    |                 |--MQTT DISCONNECT--------------------->|                                                                               
+    |                 |                                       |                                                                               
+    |                 |--Close WebSocket--------------------->|                                                                               
+    |                 |                                       |     
 ~~~~~~~~~~
 {: #figscan title="MQTT Exchange for Non-Connectable BLE Peripherals"}
 
@@ -914,61 +1075,77 @@ received from the authenticated BLE Peripheral and to subscribing to the GATT re
 published for the BLE Peripheral's Identity Address.
 
 ~~~~~~~~~~
-                    NAS/BLE                                                                                                               
-                    Visited                                    Home                                                                                
-   BLE             Central#2                                   MQTT                                                                            
-Peripheral            Host                                    Broker                                                                           
-    |                  |                                        |                                                                              
-    |--BLE ----------->|                                        |                                                                              
-    |  Advertizement   |---MQTT PUBLISH------------------------>|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                               
-    |                  |  gatt-ind/advertisement                |                                                                               
-    |                  |  msg:Advertising Report                |   
-    |                  |                                        |   
-  +---------------------------------------------------------------+                                                                            
-  |                       GATT Subscription                       |                                                                            
-  +---------------------------------------------------------------+                                                                            
-    |                  |                                        |                                                                              
-    |                  |---MQTT SUBSCRIBE---------------------->|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                             
-    |                  |  gatt-req/#                            |          
-    |                  |  topic:{peripheral_identity_address}/  |                                                                              
-    |                  |  gatt-ind-res/#                        |
-    |                  |                                        |                                                                              
-  +---------------------------------------------------------------+                                                                            
-  |            GATT Connection and Service Discovery              |                                                                            
-  +---------------------------------------------------------------+                                                                            
-    |                  |                                        |                                                                              
-    |                  |<--MQTT PUBLISH-------------------------|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                              
-    |<-BLE PDU-------->|  gatt-req/connect                      |                                                                              
-    |  Exchange        |  response topic:                       |                                                                              
-    |                  |  {peripheral_identity_address}/        |                                                                              
-    |                  |  gatt-res/connect                      |                                                                              
-    |                  |  correlation data:{binary_data}        |                                                                              
-    |                  |  msg:                                  |
-    |                  |                                        |                                                                              
-    |                  |---MQTT PUBLISH------------------------>|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                              
-    |                  |  gatt-res/connect                      |                                                                              
-    |                  |  correlation data:{binary data}        |                                                                              
-    |                  |  msg: connect-id or error              |                                                                              
-    |                  |                                        |
-    |                  |<--MQTT PUBLISH-------------------------|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                              
-    |<-BLE PDU-------->|  gatt-req/service-discovery            |                                                                              
-    |  Exchange        |  response topic:                       |                                                                              
-    |                  |  {peripheral_identity_address}/        |                                                                              
-    |                  |  gatt-res/service-discovery            |                                                                              
-    |                  |  correlation data:{binary_data}        |                                                                              
-    |                  |  msg: connect-id, optional UUID        |
-    |                  |                                        |                                                                              
-    |                  |---MQTT PUBLISH------------------------>|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                              
-    |                  |  gatt-res/service-discovery            |                                                                              
-    |                  |  correlation data:{binary data}        |                                                                              
-    |                  |  msg: service UUID or error            |                                                                              
-    |                  |                                        |    
+                   NAS/BLE                                                                                                               
+                   Visited                                    Home                                                                                
+   BLE            Central#2                                   MQTT                                                                            
+Peripheral           Host                                    Broker                                                                           
+    |                 |                                        |                                                                              
+    |--BLE----------->|                                        |                                                                              
+    |  Advertisement  |---MQTT PUBLISH------------------------>|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                               
+    |                 |  advertisement/gatt-ind                |                                                                               
+    |                 |  msg:Advertising Report                |   
+    |                 |                                        |   
+  +--------------------------------------------------------------+                                                                            
+  |                      GATT Subscription                       |                                                                            
+  +--------------------------------------------------------------+                                                                            
+    |                 |                                        |                                                                              
+    |                 |---MQTT SUBSCRIBE---------------------->|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                             
+    |                 |  +/gatt-req                            |          
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |                 |  +/gatt-ind-res                        |
+    |                 |                                        |                                                                              
+  +--------------------------------------------------------------+                                                                            
+  |           GATT Connection and Service Discovery              |                                                                            
+  +--------------------------------------------------------------+                                                                            
+    |                 |                                        |                                                                              
+    |                 |<--MQTT PUBLISH-------------------------|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |<-BLE PDU------->|  gatt-req/connect                      |                                                                              
+    |  Exchange       |  response topic:                       |                                                                              
+    |                 |  {peripheral_identity_address}/        |                                                                              
+    |                 |  gatt-res/connect                      |                                                                              
+    |                 |  correlation data:{binary_data}        |                                                                              
+    |                 |  msg:                                  |
+    |                 |                                        |                                                                              
+    |                 |---MQTT PUBLISH------------------------>|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |                 |  gatt-res/connect                      |                                                                              
+    |                 |  correlation data:{binary data}        |                                                                              
+    |                 |  msg: connect-id or error              |                                                                              
+    |                 |                                        |
+    |                 |<--MQTT PUBLISH-------------------------|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |<-BLE PDU------->|  gatt-req/service-discovery            |                                                                              
+    |  Exchange       |  response topic:                       |                                                                              
+    |                 |  {peripheral_identity_address}/        |                                                                              
+    |                 |  gatt-res/service-discovery            |                                                                              
+    |                 |  correlation data:{binary_data}        |                                                                              
+    |                 |  msg: connect-id, optional UUID        |
+    |                 |                                        |                                                                              
+    |                 |---MQTT PUBLISH------------------------>|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |                 |  gatt-res/service-discovery            |                                                                              
+    |                 |  correlation data:{binary data}        |                                                                              
+    |                 |  msg: service UUID or error            |                                                                              
+    |                 |                                        |
+    |                 |<--MQTT PUBLISH-------------------------|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |<-BLE PDU------->|  disconnect/gatt-req                   |                                                                              
+    |  Exchange       |  response topic:                       |                                                                              
+    |                 |  {peripheral_identity_address}/        |                                                                              
+    |                 |  disconnect/gatt-res                   |                                                                              
+    |                 |  correlation data:{binary_data}        |                                                                              
+    |                 |  msg: connect-id                       |
+    |                 |                                        |                                                                              
+    |                 |---MQTT PUBLISH------------------------>|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |                 |  disconnect/gatt-res                   |                                                                              
+    |                 |  correlation data:{binary data}        |                                                                              
+    |                 |  msg: ok or error                      |                                                                              
+    |                 |                                        |   
+
 ~~~~~~~~~~
 {: #figcon title="MQTT Exchange for GATT Service Discovery"}
 
@@ -978,30 +1155,30 @@ If the BLE Peripheral is connectable, a Bluetooth Application can read GATT attr
 
 ~~~~~~~~~~
                     NAS/BLE                                                                                                               
-                    Visited                                    Home                                                                                
-   BLE             Central#2                                   MQTT                                                                            
-Peripheral            Host                                    Broker                                                                           
-    |                  |                                        |                                                                              
-  +---------------------------------------------------------------+                                                                            
-  |                       GATT Read Request                       |                                                                            
-  +---------------------------------------------------------------+                                                                            
-    |                  |                                        |                                                                              
-    |                  |<--MQTT PUBLISH-------------------------|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                              
-    |<-BLE PDU-------->|  gatt-req/read                         |                                                                              
-    |  Exchange        |  response topic:                       |                                                                              
-    |                  |  {peripheral_identity_address}/        |                                                                              
-    |                  |  gatt-res/read                         |                                                                              
-    |                  |  correlation data:{binary_data}        |                                                                              
-    |                  |  msg: Characteristic optional offset,  |
-    |                  |       optional maxlen                  |                                                                       
-    |                  |                                        |                                                                              
-    |                  |---MQTT PUBLISH------------------------>|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                              
-    |                  |  gatt-res/read                         |                                                                              
-    |                  |  correlation data:{binary data}        |                                                                              
-    |                  |  msg: Handle, opcode, offset, value or |                                                                              
-    |                  |       error                            |    
+                    Visited                                   Home                                                                                
+   BLE             Central#2                                  MQTT                                                                            
+Peripheral           Host                                    Broker                                                                           
+    |                 |                                        |                                                                              
+  +--------------------------------------------------------------+                                                                            
+  |                      GATT Read Request                       |                                                                            
+  +--------------------------------------------------------------+                                                                            
+    |                 |                                        |                                                                              
+    |                 |<--MQTT PUBLISH-------------------------|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |<-BLE PDU------->|  read/gatt-req                         |                                                                              
+    |  Exchange       |  response topic:                       |                                                                              
+    |                 |  {peripheral_identity_address}/        |                                                                              
+    |                 |  read/gatt-res                         |                                                                              
+    |                 |  correlation data:{binary_data}        |                                                                              
+    |                 |  msg: Characteristic optional offset,  |
+    |                 |       optional maxlen                  |                                                                       
+    |                 |                                        |                                                                              
+    |                 |---MQTT PUBLISH------------------------>|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |                 |  read/gatt-res                         |                                                                              
+    |                 |  correlation data:{binary data}        |                                                                              
+    |                 |  msg: Handle, opcode, offset, value or |                                                                              
+    |                 |       error                            |    
 ~~~~~~~~~~
 {: #figread title="MQTT Exchange for GATT Read Attribute"}
 
@@ -1011,30 +1188,30 @@ If the BLE Peripheral is connectable, a Bluetooth Application can write GATT att
 
 
 ~~~~~~~~~~
-                    NAS/BLE                                                                                                               
-                    Visited                                    Home                                                                                
-   BLE             Central#2                                   MQTT                                                                            
-Peripheral            Host                                    Broker                                                                           
-    |                  |                                        |                                                                              
-  +---------------------------------------------------------------+                                                                            
-  |                      GATT Write Request                       |                                                                            
-  +---------------------------------------------------------------+                                                                            
-    |                  |                                        |                                                                              
-    |                  |<--MQTT PUBLISH-------------------------|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                             
-    |<-BLE PDU-------->|  gatt-req/write                        |                                                                              
-    |  Exchange        |  response topic:                       |                                                                              
-    |                  |  {peripheral_identity_address}/        |                                                                              
-    |                  |  gatt-res/write                        |                                                                              
-    |                  |  correlation data:{binary_data}        |                                                                              
-    |                  |  msg: characteristic, length, value    |                                                                              
-    |                  |                                        |                                                                              
-    |                  |---MQTT PUBLISH------------------------>|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                              
-    |                  |  gatt-res/write                        |                                                                              
-    |                  |  correlation data:{binary data}        |                                                                              
-    |                  |  msg: success or error                 |                                                                              
-    |                  |                                        |    
+                   NAS/BLE                                                                                                               
+                   Visited                                    Home                                                                                
+   BLE            Central#2                                   MQTT                                                                            
+Peripheral           Host                                    Broker                                                                           
+    |                 |                                        |                                                                              
+  +--------------------------------------------------------------+                                                                            
+  |                     GATT Write Request                       |                                                                            
+  +--------------------------------------------------------------+                                                                            
+    |                 |                                        |                                                                              
+    |                 |<--MQTT PUBLISH-------------------------|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                             
+    |<-BLE PDU------->|  write/gatt-req                        |                                                                              
+    |  Exchange       |  response topic:                       |                                                                              
+    |                 |  {peripheral_identity_address}/        |                                                                              
+    |                 |  write/gatt-res                        |                                                                              
+    |                 |  correlation data:{binary_data}        |                                                                              
+    |                 |  msg: characteristic, length, value    |                                                                              
+    |                 |                                        |                                                                              
+    |                 |---MQTT PUBLISH------------------------>|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |                 |  write/gatt-res                        |                                                                              
+    |                 |  correlation data:{binary data}        |                                                                              
+    |                 |  msg: success or error                 |                                                                              
+    |                 |                                        |    
 ~~~~~~~~~~
 {: #figwrite title="MQTT Exchange for GATT Write Attribute"}
 
@@ -1045,39 +1222,39 @@ A Bluetooth Application can subscribe to receive Bluetooth notifications sent by
 
 ~~~~~~~~~~
                     NAS/BLE                                                                                                               
-                    Visited                                    Home                                                                                
-   BLE             Central#2                                   MQTT                                                                            
-Peripheral            Host                                    Broker                                                                           
-    |                  |                                        |                                                                              
-  +---------------------------------------------------------------+                                                                            
-  |                 GATT Set Notification Request                 |                                                                            
-  +---------------------------------------------------------------+                                                                            
-    |                  |                                        |                                                                              
-    |                  |<--MQTT PUBLISH-------------------------|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                             
-    |<-BLE PDU-------->|  gatt-req/notification                 |                                                                              
-    |  Exchange        |  response topic:                       |                                                                              
-    |                  |  {peripheral_identity_address}/        |                                                                              
-    |                  |  gatt-res/notification                 |                                                                              
-    |                  |  correlation data:{binary_data}        |                                                                              
-    |                  |  msg: characteristic, enable/disable   |                                                                              
-    |                  |                                        |                                                                              
-    |                  |---MQTT PUBLISH------------------------>|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                              
-    |                  |  gatt-res/notification                 |                                                                              
-    |                  |  correlation data:{binary data}        |                                                                              
-    |                  |  msg: success or error                 |                                                                              
-    |                  |                                        |   
-  +---------------------------------------------------------------+                                                                            
-  |                       GATT Notification                       |                                                                            
-  +---------------------------------------------------------------+   
-    |                  |                                        |                                                                              
-    |--BLE ----------->|                                        |                                                                              
-    |  Notification    |---MQTT PUBLISH------------------------>|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                              
-    |                  |  gatt-ind/notification                 |                                                                              
-    |                  |  msg:handle & value                    |   
-    |                  |                                        |   
+                    Visited                                   Home                                                                                
+   BLE             Central#2                                  MQTT                                                                            
+Peripheral           Host                                    Broker                                                                           
+    |                 |                                        |                                                                              
+  +--------------------------------------------------------------+                                                                            
+  |                GATT Set Notification Request                 |                                                                            
+  +--------------------------------------------------------------+                                                                            
+    |                 |                                        |                                                                              
+    |                 |<--MQTT PUBLISH-------------------------|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                             
+    |<-BLE PDU------->|  write/gatt-req                        |                                                                              
+    |  Exchange       |  response topic:                       |                                                                              
+    |                 |  {peripheral_identity_address}/        |                                                                              
+    |                 |  write/gatt-res                        |                                                                              
+    |                 |  correlation data:{binary_data}        |                                                                              
+    |                 |  msg: characteristic, enable/disable   |                                                                              
+    |                 |                                        |                                                                              
+    |                 |---MQTT PUBLISH------------------------>|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |                 |  write/gatt-res                        |                                                                              
+    |                 |  correlation data:{binary data}        |                                                                              
+    |                 |  msg: success or error                 |                                                                              
+    |                 |                                        |   
+  +--------------------------------------------------------------+                                                                            
+  |                      GATT Notification                       |                                                                            
+  +--------------------------------------------------------------+   
+    |                 |                                        |                                                                              
+    |--BLE ---------->|                                        |                                                                              
+    |  Notification   |---MQTT PUBLISH------------------------>|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |                 |  notification/gatt-ind                 |                                                                              
+    |                 |  msg:handle & value                    |   
+    |                 |                                        |   
 ~~~~~~~~~~
 {: #fignotification title="MQTT Exchange for BLE Peripheral Notifications"}
 
@@ -1088,117 +1265,117 @@ A Bluetooth Application can subscribe to receive Bluetooth indications sent by t
 
 ~~~~~~~~~~
                     NAS/BLE                                                                                                               
-                    Visited                                    Home                                                                                
-   BLE             Central#2                                   MQTT                                                                            
-Peripheral            Host                                    Broker                                                                           
-    |                  |                                        |                                                                              
-  +---------------------------------------------------------------+                                                                            
-  |                  GATT Set Indication Request                  |                                                                            
-  +---------------------------------------------------------------+                                                                            
-    |                  |                                        |                                                                              
-    |                  |<--MQTT PUBLISH-------------------------|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                             
-    |<-BLE PDU-------->|  gatt-req/notification                 |                                                                              
-    |  Exchange        |  response topic:                       |                                                                              
-    |                  |  {peripheral_identity_address}/        |                                                                              
-    |                  |  gatt-res/notification                 |                                                                              
-    |                  |  correlation data:{binary_data}        |                                                                              
-    |                  |  msg: identifier & handle              |                                                                              
-    |                  |                                        |                                                                              
-    |                  |---MQTT PUBLISH------------------------>|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                              
-    |                  |  gatt-res/notification                 |                                                                              
-    |                  |  correlation data:{binary data}        |                                                                              
-    |                  |  msg: procedure complete               |                                                                              
-    |                  |                                        |   
-  +---------------------------------------------------------------+                                                                            
-  |                        GATT Indication                        |                                                                            
-  +---------------------------------------------------------------+   
-    |                  |                                        |                                                                              
-    |--BLE ----------->|                                        |                                                                              
-    |  Indication      |---MQTT PUBLISH------------------------>|                                                                              
-    |                  |  topic:{peripheral_identity_address}/  |                                                                              
-    |                  |  gatt-ind-req/notification             |                                                                              
-    |                  |  response topic:                       |
-    |                  |  {peripheral_identity_address}/        |   
-    |                  |  gatt-ind-res/notification             |                                                                              
-    |                  |  correlation data:{binary_data}        |                                                                              
-    |                  |  msg: Indication                       |
-    |                  |                                        |
-    |                  |<--MQTT PUBLISH-------------------------|                                                                              
-    |<-BLE ------------|  topic:{peripheral_identity_address}/  |                                                                              
-    |  Status          |  gatt-ind-res/notification             |                                                                              
-    |                  |  correlation data:{binary data}        |                                                                              
-    |                  |  msg: Indication confirmation          |   
-    |                  |                                        |
+                    Visited                                   Home                                                                                
+   BLE             Central#2                                  MQTT                                                                            
+Peripheral           Host                                    Broker                                                                           
+    |                 |                                        |                                                                              
+  +--------------------------------------------------------------+                                                                            
+  |                 GATT Set Indication Request                  |                                                                            
+  +--------------------------------------------------------------+                                                                            
+    |                 |                                        |                                                                              
+    |                 |<--MQTT PUBLISH-------------------------|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                             
+    |<-BLE PDU------->|  write/gatt-req                        |                                                                              
+    |  Exchange       |  response topic:                       |                                                                              
+    |                 |  {peripheral_identity_address}/        |                                                                              
+    |                 |  write/gatt-res                        |                                                                              
+    |                 |  correlation data:{binary_data}        |                                                                              
+    |                 |  msg: identifier & handle              |                                                                              
+    |                 |                                        |                                                                              
+    |                 |---MQTT PUBLISH------------------------>|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |                 |  write/gatt-res                        |                                                                              
+    |                 |  correlation data:{binary data}        |                                                                              
+    |                 |  msg: procedure complete               |                                                                              
+    |                 |                                        |   
+  +--------------------------------------------------------------+                                                                            
+  |                       GATT Indication                        |                                                                            
+  +--------------------------------------------------------------+   
+    |                 |                                        |                                                                              
+    |--BLE----------->|                                        |                                                                              
+    |  Indication     |---MQTT PUBLISH------------------------>|                                                                              
+    |                 |  topic:{peripheral_identity_address}/  |                                                                              
+    |                 |  notification/gatt-ind-req             |                                                                              
+    |                 |  response topic:                       |
+    |                 |  {peripheral_identity_address}/        |   
+    |                 |  notification/gatt-ind-res             |                                                                              
+    |                 |  correlation data:{binary_data}        |                                                                              
+    |                 |  msg: Indication                       |
+    |                 |                                        |
+    |                 |<--MQTT PUBLISH-------------------------|                                                                              
+    |<-BLE------------|  topic:{peripheral_identity_address}/  |                                                                              
+    |  Status         |  notification/gatt-ind-res             |                                                                              
+    |                 |  correlation data:{binary data}        |                                                                              
+    |                 |  msg: Indication confirmation          |   
+    |                 |                                        |
 ~~~~~~~~~~
 {: #figindication title="MQTT Exchange for BLE Peripheral Indications"}
 
 ## MQTT Exchange for dealing with NAS Mobility
 
 ~~~~~~~~~~
-               NAS/BLE      NAS/BLE                                                                                                        
-               Visited      Visited                            Home                                                                        
-   BLE        Central#2    Central#3                           MQTT                                                                        
-Peripheral       Host         Host                            Broker                                                                       
-    |             |            |                                |                                                                          
-  +---------------------------------------------------------------+                                                                        
-  |           Initial Authentication With Central#2               |                                                                        
-  +---------------------------------------------------------------+                                                                        
-    |             |            |                                |                                                                          
-    |             |--MQTT SUBSCRIBE --------------------------->|                                                                          
-    |             |  topic:{periperal_identity_address}/        |                                                                          
-    |             |  gatt-req/#                                 |                                                                          
-    |             |            |                                |                                                                          
-  +---------------------------------------------------------------+                                                                        
-  |    NAS Mobility to Central#3 without MQTT unsubscription      |                                                                        
-  +---------------------------------------------------------------+                                                                        
-    |             |            |                                |                                                                          
-    |             |            |--MQTT SUBSCRIBE--------------> |                                                                          
-    |             |            | topic:                         |                                                                          
-    |             |            | {peripheral_identity_address}/ |                                                                          
-    |             |            | gatt-req/#                     |                                                                          
-    |             |            |                                |                                                                          
-  +---------------------------------------------------------------+                                                                        
-  |      Example GATT Connection Request with NAS Mobility        |                                                                        
-  +---------------------------------------------------------------+                                                                        
-    |             |            |                                |                                                                          
-    |             |<-MQTT PUBLISH-------------------------------|                                                                          
-    |          +--| topic:{peripheral_identity_address}/        |                                                                          
-    |          |  | gatt-req/connect                            |                                                                          
-    |          |  | response topic:                             |                                                                          
-    |          |  | {peripheral_identity_address}/              |                                                                          
-    |          |  | gatt-res/connect                            |                                                                          
-    |          |  | correlation data:{binary_data}              |                                                                          
-    |          |  | msg:                                        |                                                                          
-    |          |  |            |                                |                                                                          
-    |          |  |            |<--MQTT PUBLISH-----------------|                                                                          
-    |          |  |            | topic:                         |                                                                          
-    |          |  |            | {peripheral_identity_address}/ |                                                                          
-    |          |  |            | gatt-req/connect               |                                                                          
-    |<-BLE-----|-------------->| response topic:                |                                                                          
-    |  PDU     |  |            | {peripheral_identity_address}/ |                                                                          
-    |  Exchange|  |            | gatt-res/connect               |                                                                          
-    |          |  |            | correlation data:{binary_data} |                                                                          
-    |          |  |            | msg:                           |                                                                          
-    |          |  |            |                                |                                                                          
-    |          |  |            |---MQTT PUBLISH---------------->|                                                                          
-    |          |  |            | topic:                         |                                                                          
-    |          |  |            | {peripheral_identity_address}/ |                                                                          
-    | Central#2|  |            | gatt-res/connect               |                                                                          
-    |       BLE|  |            | correlation data:{binary data} |                                                                          
-    |   Timeout|  |            | msg: connect-id                |                                                                          
-    |          +->|            |                                |                                                                          
-    |             |---MQTT PUBLISH----------------------------->|                                                                          
-    |             | topic:{peripheral_identity_address}/        |                                                                          
-    |             | gatt-res/connect                            |                                                                          
-    |             | correlation data:{binary data}              |                                                                          
-    |             | msg: procedure timeout                      |                                                                          
-    |             |            |                                |                                                                          
-  +---------------------------------------------------------------+                                                                        
-  |        MQTT Broker drops timeout message for PUBLISH          |                                                                        
-  |               with duplicated correlation data                |                                                                        
-  +---------------------------------------------------------------+                                                                        
+              NAS/BLE      NAS/BLE                                                                                                        
+              Visited      Visited                            Home                                                                        
+   BLE       Central#2    Central#3                           MQTT                                                                        
+Peripheral      Host         Host                            Broker                                                                       
+    |            |            |                                |                                                                          
+  +--------------------------------------------------------------+                                                                        
+  |          Initial Authentication With Central#2               |                                                                        
+  +--------------------------------------------------------------+                                                                        
+    |            |            |                                |                                                                          
+    |            |--MQTT SUBSCRIBE --------------------------->|                                                                          
+    |            |  topic:{periperal_identity_address}/        |                                                                          
+    |            |  +/gatt-req                                 |                                                                          
+    |            |            |                                |                                                                          
+  +--------------------------------------------------------------+                                                                        
+  |   NAS Mobility to Central#3 without MQTT unsubscription      |                                                                        
+  +--------------------------------------------------------------+                                                                        
+    |            |            |                                |                                                                          
+    |            |            |--MQTT SUBSCRIBE--------------> |                                                                          
+    |            |            | topic:                         |                                                                          
+    |            |            | {peripheral_identity_address}/ |                                                                          
+    |            |            | +/gatt-req                     |                                                                          
+    |            |            |                                |                                                                          
+  +--------------------------------------------------------------+                                                                        
+  |     Example GATT Connection Request with NAS Mobility        |                                                                        
+  +--------------------------------------------------------------+                                                                        
+    |            |            |                                |                                                                          
+    |            |<-MQTT PUBLISH-------------------------------|                                                                          
+    |         +--| topic:{peripheral_identity_address}/        |                                                                          
+    |         |  | connect/gatt-req                            |                                                                          
+    |         |  | response topic:                             |                                                                          
+    |         |  | {peripheral_identity_address}/              |                                                                          
+    |         |  | connect/gatt-res                            |                                                                          
+    |         |  | correlation data:{binary_data}              |                                                                          
+    |         |  | msg:       |                                |                                                                          
+    |         |  |            |                                |                                                                          
+    |         |  |            |<--MQTT PUBLISH-----------------|                                                                          
+    |         |  |            | topic:                         |                                                                          
+    |         |  |            | {peripheral_identity_address}/ |                                                                          
+    |         |  |            | connect/gatt-req               |                                                                          
+    |<-BLE----|-------------->| response topic:                |                                                                          
+    |  PDU    |  |            | {peripheral_identity_address}/ |                                                                          
+    |  Exchange  |            | connect/gatt-res               |                                                                          
+    |         |  |            | correlation data:{binary_data} |                                                                          
+    |         |  |            | msg:                           |                                                                          
+    |         |  |            |                                |                                                                          
+    |         |  |            |---MQTT PUBLISH---------------->|                                                                          
+    |         |  |            | topic:                         |                                                                          
+    |         |  |            | {peripheral_identity_address}/ |                                                                          
+    |Central#2|  |            | connect/gatt-res               |                                                                          
+    |      BLE|  |            | correlation data:{binary data} |                                                                          
+    |  Timeout|  |            | msg: connect-id                |                                                                          
+    |         +->|            |                                |                                                                          
+    |            |---MQTT PUBLISH----------------------------->|                                                                          
+    |            | topic:{peripheral_identity_address}/        |                                                                          
+    |            | connect/gatt-res                            |                                                                          
+    |            | correlation data:{binary data}              |                                                                          
+    |            | msg: procedure timeout                      |                                                                          
+    |            |            |                                |                                                                          
+  +--------------------------------------------------------------+                                                                        
+  |       MQTT Broker drops timeout message for PUBLISH          |                                                                        
+  |              with duplicated correlation data                |                                                                        
+  +--------------------------------------------------------------+                                                                        
 ~~~~~~~~~~
 {: #figmobility title="MQTT Exchange for Inter-NAS Mobility without MQTT Unsubscription"}
 
@@ -1209,138 +1386,52 @@ an Accounting-Request message with Acct-Status-Type set to STOP and Acct-Termina
 
 ~~~~~~~~~~
                     NAS/BLE                                                                                                             
-                    Visited                    Home            Home                                                                              
-   BLE             Central#2                  RADIUS           MQTT                                                                          
-Peripheral            Host                    Server          Broker                                                                         
-    |                  |                         |              |                                                                            
-    |--BLE ----------->|                         |              |                                                                            
-    |  Advertizement   |---MQTT PUBLISH------------------------>|                                                                            
-    |               +--|  topic:{peripheral_identity_address}/  |                                                                            
-    |               |  |  gatt-ind/advertisement |              |                                                                            
-    |               |  |  msg:Advertising Report |              |                                                                            
-    |               |  |                         |              |                                                                            
-    |               |  |                         |              |                                                                            
-    |               +->|Idle Timer Expiry        |              |                                                                            
-    |                  |                         |              |                                                                            
-    |                  |---Accounting-Request--->|              |                                                                            
-    |                  |  Acct-Status-Type=Stop  |              |                                                                            
-    |                  |                         |              |                                                                            
-    |                  |---MQTT UNSUBSCRIBE-------------------->|                                                                            
-    |                  |  topic:{peripheral_identity_address}/  |                                                                           
-    |                  |  gatt-req/#             |              |                                                                            
-    |                  |  topic:{peripheral_identity_address}/  |                                                                            
-    |                  |  gatt-ind-res/#         |              |  
-    |                  |                         |              |                                                                            
-    |              +------------------------------------------------+                                                                        
-    |              |       Last Session to MQTT Broker Stopped      |                                                                        
-    |              +------------------------------------------------+                                                                        
-    |                  |                         |              |                                                                            
-    |                  |---MQTT DISCONNECT--------------------->|                                                                            
-    |                  |                         |              |                                                                            
-    |                  |---Close WebSocket--------------------->|                                                                            
-    |                  |                         |              |               
+                    Visited                   Home            Home                                                                              
+   BLE             Central#2                 RADIUS           MQTT                                                                          
+Peripheral           Host                    Server          Broker                                                                         
+    |                 |                         |              |                                                                            
+    |--BLE----------->|                         |              |                                                                            
+    |  Advertisement  |---MQTT PUBLISH------------------------>|                                                                            
+    |              +--|  topic:{peripheral_identity_address}/  |                                                                            
+    |              |  |  advertisement/gatt-ind |              |                                                                            
+    |              |  |  msg:Advertising Report |              |                                                                            
+    |              |  |                         |              |                                                                            
+    |              |  |                         |              |                                                                            
+    |              +->|Idle Timer Expiry        |              |                                                                            
+    |                 |                         |              |                                                                            
+    |                 |---Accounting-Request--->|              |                                                                            
+    |                 |  Acct-Status-Type=Stop  |              |                                                                            
+    |                 |                         |              |                                                                            
+    |                 |---MQTT UNSUBSCRIBE-------------------->|                                                                            
+    |                 |  topic:{peripheral_identity_address}/  |                                                                           
+    |                 |  +/gatt-req             |              |                                                                            
+    |                 |  topic:{peripheral_identity_address}/  |                                                                            
+    |                 |  +/gatt-ind-res         |              |  
+    |                 |                         |              |                                                                            
+    |             +------------------------------------------------+                                                                        
+    |             |       Last Session to MQTT Broker Stopped      |                                                                        
+    |             +------------------------------------------------+                                                                        
+    |                 |                         |              |                                                                            
+    |                 |---MQTT DISCONNECT--------------------->|                                                                            
+    |                 |                         |              |                                                                            
+    |                 |---Close WebSocket--------------------->|                                                                            
+    |                 |                         |              |               
 ~~~~~~~~~~
 {: #figdisc title="MQTT Exchange when disconnecting from a connected BLE Peripheral"}
 
-#  BLE-Keying-Material Data Structure {#BKMDS}
+#  History of Changes
 
-This section describes the BLE-Keying-Material Data Structure. It is intended to move this material to another document - but is included here to describe the encoding of Identity Address(es) and cryptographic material.
+Note: This appendix will be deleted in the final version of the document.
 
+From version 00 -> 01:
 
+* switched from User-Password to new Hashed-Password attribute using SHA256
 
-~~~~~~~~~~
-0                   1                   2                   3
-0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                  Peripheral Identity Address    
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      Peripheral IA (cont'd)    |    Central Identity Address
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                 Central Identity Address (cont'd)              |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|           KM Type             |             KEK ID
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                             KEK ID
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                         KEK ID (cont'd)
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                         KEK ID (cont'd)
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        KEK ID (cont'd)         |                 IV
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                           IV (cont'd)
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-          IV (cont'd)           |       Keying Material Data
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                  Keying Material Data (cont'd)
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+* switched to TLV-encoding of BLE-Keying-Material
 
-~~~~~~~~~~
-{: #ds-pkm title="Encoding BLE-Keying-Material Data Structure"}
+* re-ordered MQTT topic definitions
 
-
-Peripheral Identity Address
-
-
->  The Peripheral Identity Address field is 6 octets in length and
-contains the Peripheral's 6-octet Identity Address.
-
-Central Identity Address
-
-
->  The Central Identity Address field is 6 octets in length and
-contains the Central's 6-octet Identity Address. If the
-Central Identity Address is not used, it is set to 0.
-
-KM Type
-
-
->  The KM Type field is 2 octets in length and identifies the type of keying material
-included in the Keying Material Data field. This allows
-for multiple keys for different purposes to be present in the same
-attribute. This document defines three values for the KM Type:
-
->>>    0 &nbsp; &nbsp; The Keying Material Data field contains the
-      16-octet Peripheral Identity Resolving Key encrypted using the AES key wrapping process
-      with 128-bit KEK defined in {{RFC3394}}
-
->>>    1  &nbsp; &nbsp; The Keying Material Data field contains the encrypted
-        16-octet Peripheral Identity Resolving Key
-        and the 16-octet Long Term Key generated during an LE Secure Connection bonding procedure.
-        The Peripheral IRK is passed as input P1 and P2 and the Long Term Key is passed as input P3 and P4
-        in the AES key wrapping process with 128-bit KEK defined in {{RFC3394}}.
-
->>>    2 &nbsp; &nbsp;  The Keying Material Data field contains the 16-octet Peripheral Identity Resolving Key,
-        the 16-octet Long Term Key generated during an LE Secure Connection bonding procedure and the
-        16-octet Central Identity Resolving Key. The Peripheral IRK is passed as input P1 and P2,
-        the Long Term Key is passed as input P3 and P4 and the Central IRK is passed as input P5 and P6
-        in the AES key wrapping process with 128-bit KEK defined in {{RFC3394}}.
-
-  KEK ID
-
-> The KEK ID field is 16 octets in length.  The combination of the
-KEK ID and the RADIUS client and server IP addresses together uniquely
-identify a key shared between the RADIUS client and server.  As a
-result, the KEK ID need not be globally unique.  The KEK ID MUST
-refer to an encryption key for use with the AES Key Wrap with
-128-bit KEK algorithm {{RFC3394}} .  This key is used to protect
-the contents of the Keying Material Data field (below).  
-The KEK ID is a constant that is configured
-through an out-of-band mechanism.  The same value is configured on
-both the RADIUS client and server.  If no KEK ID is configured,
-then the field is set to 0.  If only a single KEK is configured
-for use between a given RADIUS client and server, then 0 can be
-used as the default value.
-
-  IV
-
-> The IV field is 8-octets in length and its value
-MUST be as specified in {{RFC3394}} .
-
-  Keying Material Data
-
-> The Keying Material Data field is of variable length and contains
-the actual encrypted keying material as identified using the KM Type field.
+* removed redundant attribute sections
 
 # Acknowledgements {#Acknowledgements}
 {: numbered="false"}
