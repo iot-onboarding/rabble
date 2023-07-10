@@ -2,7 +2,7 @@
 title: RADIUS profile for Bonded Bluetooth Low Energy peripherals
 abbrev: RABBLE
 docname: draft-grayson-radext-rabble-01
-date: 2023-04-26
+date: 2023-07-10
 category: std
 submissiontype: IETF
 
@@ -39,18 +39,18 @@ author:
 normative:
   RFC2119:
   RFC2865:
-  RFC3580:
   RFC4086:
   RFC4868:
   RFC8174:
   RFC6455:
   RFC5580:
-  RFC6929:
+  RFC8044:
   I-D.draft-dekok-radext-deprecating-radius:
 
 informative:
   RFC2866:
   RFC3394:
+  RFC3580:
   RFC7585:
   I-D.shahzad-scim-device-model:
   BLUETOOTH:
@@ -136,7 +136,7 @@ Bluetooth Low Energy (BLE):
 Bonding:
 
   A Bluetooth {{BLUETOOTH}} defined process that creates a relation between
-  a Bluetooth Central device and a Bluetooth Peripheral device which generates session keying material that is expected
+  a Bluetooth Central device and a Bluetooth Peripheral device and which generates session keying material that is expected
   to be stored by both Bluetooth devices, to be used for future authentication.
 
 Hash:
@@ -167,7 +167,7 @@ Long-Term  key (LTK):
 
 prand:
 
-  A 24-bit random number used by a BLE device to
+  A 22-bit random number used by a BLE device to
   generate a Resolvable Private Address. The prand is encoded in the  24 most
   significant bits of a Resolvable Private Address.
 
@@ -311,7 +311,6 @@ where the first string character represents the most significant
 hexadecimal digit, i.e., a prand value of 0x035fb2 is encoded as "035FB2".
 
 
-
 NAS-IP-Address, NAS-IPv6-Address
 --------------
 
@@ -346,7 +345,7 @@ described in {{RFC2865}}.
 Session-Timeout
 --------------
 
-When sent along in an Access-Accept without a Termination-Action
+When sent in an Access-Accept without a Termination-Action
 attribute or with a Termination-Action attribute set to Default, the
 Session-Timeout attribute specifies the maximum number of seconds of
 service provided prior to session termination.
@@ -370,7 +369,7 @@ Called-Station-Id
 
 This attribute is used to store the
 public Identity Address (BD_ADDR) of the Bluetooth Access Point in ASCII
-formatted as specified in {{RFC3580}}.
+formatted as specified in section 3.21 of {{RFC3580}}.
 
 
 NAS-Identifier
@@ -408,7 +407,7 @@ Data Type
 
 Value
 
->  The TLV data type is specified in {{RFC6929}} and its value
+>  The TLV data type is specified in section 3.13 of {{RFC8044}} and its value
 is determined by the TLV-Type field.
 Two TLV-Types are defined for use with the Hashed-Password Attribute.
 
@@ -421,14 +420,15 @@ TLV-Type
 
 TLV-Value:
 
->  A "string" data type encoding binary data representing a random 256-bit key. The
+>  A string data type, as defined in section 3.1 of {{RFC8044}},
+encoding a sequence of octets representing a random 256-bit key. The
 value SHOULD satisfy the requirements of {{RFC4086}}. A new key value MUST be used
 whenever the value of Hashed-Password.Hmac-Sha256-128-Password is changed. The key MUST NOT be changed
 when a message is being retransmitted.
 
 TLV-Length:
 
->> 32 octets
+>> 34 octets
 
 ### Hashed-Password.Hmac-Sha256-128-Password
 
@@ -438,14 +438,14 @@ TLV-Type
 
 TLV-Value:
 
->  A "string" data type encoding binary data representing the 128-bit truncated output
+>  A string data type encoding a sequence of octets representing the first 128-bit (truncated) output
 of the HMAC-SHA-256-128 algorithm {{RFC4868}} where the input data
 corresponds to the 24-bit hash recovered from the Bluetooth Resolvable Private Address
 and the key corresponds to the value of the TLV-Type Hashed-Password.Hmac-Sha256-128-Key.
 
 TLV-Length:
 
->> 16 octets
+>> 18 octets
 
 ### Hashed-Password TLV-Type Usage
 
@@ -467,6 +467,20 @@ by the BLE Peripheral.
 Zero or more GATT-Service-Profile Attributes MAY be included in
 an Access-Request packet.
 
+A summary of the GATT-Service-Profile Attribute format is
+shown below. The fields are transmitted from left to right.
+
+~~~~~~~~~~
+0                   1                   2                   3
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|     Type      |  Length       |           Value
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+           Value (cont)         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    
+
+~~~~~~~~~~
+{: #attr-gatt title="Encoding GATT-Service-Profile Attribute"}
 
 Type
 
@@ -507,7 +521,7 @@ Data Type
 
 Value
 
->  The TLV data type is specified in {{RFC6929}} and its value is
+>  The TLV data type is specified in section 3.13 of {{RFC8044}} and its value is
 determined by the TLV-Type field. Five TLV-Types are defined
 for use with the BLE-Keying-Material Attribute.
 
@@ -519,12 +533,12 @@ TLV-Type
 
 TLV-Value:
 
->  A "string" data type encoding binary data representing
+>  A string data type encoding a sequence of octets representing
 the Peripheral's 6-octet Identity Address.
 
 TLV-Length:
 
->  6 octets
+>  8 octets
 
 ### BLE-Keying-Material.Central-IA
 
@@ -534,12 +548,12 @@ TLV-Type
 
 TLV-Value:
 
->  A "string" data type encoding binary data representing
+>  A string data type encoding a sequence of octets representing
 the Central's 6-octet Identity Address.
 
 TLV-Length:
 
->  6 octets
+>  8 octets
 
 ### BLE-Keying-Material.IV
 
@@ -549,13 +563,13 @@ TLV-Type
 
 TLV-Value:
 
->  A "string" data type encoding binary data representing
-an 8-octet initialization vector. The value MUST be as
-specified in {{RFC3394}}.
+>  A string data type encoding a sequence of octets representing
+an 8-octet initial value (IV). The value MUST be as
+specified in section 2.2.3 of {{RFC3394}}.
 
 TLV-Length:
 
->  8 octets
+>  10 octets
 
 ### BLE-Keying-Material.KEK-ID
 
@@ -565,7 +579,7 @@ TLV-Type
 
 TLV-Value:
 
->   A "string" data type encoding binary data representing
+>   A string data type encoding a sequence of octets representing
 the identity of a Key Encryption Key (KEK).
 The combination of the BLE-Keying-Material.KEK-ID value
 and the RADIUS client and server IP addresses together
@@ -579,13 +593,13 @@ This key is used to protect the contents of the BLE-Keying-Material.KM-Data TLV
 
 >   The BLE-Keying-Material.KEK-ID is a constant that is configured through an out-of-band
 mechanism.  The same value is configured on both the RADIUS client
-and server.  If no BLE-Keying-Material.KEK-ID is configured, then the field is set to
+and server.  If no BLE-Keying-Material.KEK-ID TLV-Type is signalled, then the field is set to
 0.  If only a single KEK is configured for use between a given
 RADIUS client and server, then 0 can be used as the default value.
 
 TLV-Length:
 
->  16 octets
+>  18 octets
 
 ### BLE-Keying-Material.KM-Type
 
@@ -595,31 +609,44 @@ TLV-Type:
 
 TLV-Value:
 
->  An "integer" data type
+>  An integer data type
 identifying the type of keying material included in the BLE-Keying-Material.KM-Data TLV.  
 This allows for multiple keys for different purposes to be present in
 the same attribute.  This document defines three values for the
 The BLE-Keying-Material.KM-Type
 
 >>>    0 &nbsp; &nbsp; The BLE-Keying-Material.KM-Data TLV contains the
-      16-octet Peripheral Identity Resolving Key encrypted using the AES key wrapping process
-      with 128-bit KEK defined in {{RFC3394}}
+      16-octet Peripheral IRK encrypted using the AES key wrapping process
+      with 128-bit KEK defined in {{RFC3394}}. The Peripheral IRK is passed as
+      input P1 and P2, with the plaintext P1 corresponding to octet 0 through to octet 7 of the
+      IRK and plaintext P2 corresponding to octet 8 through to octet 15 of the
+      IRK.
 
 >>>    1  &nbsp; &nbsp; The BLE-Keying-Material.KM-Data TLV contains the encrypted
-        16-octet Peripheral Identity Resolving Key
-        and the 16-octet Long Term Key generated during an LE Secure Connection bonding procedure.
-        The Peripheral IRK is passed as input P1 and P2 and the Long Term Key is passed as input P3 and P4
-        in the AES key wrapping process with 128-bit KEK defined in {{RFC3394}}.
+        16-octet Peripheral IRK
+        and the 16-octet LTK generated during an LE Secure Connection bonding procedure
+        using the AES key wrapping process with 128-bit KEK defined in {{RFC3394}}.
+        The Peripheral IRK is passed as the plaintext input P1 and P2, with  P1 corresponding
+        to octet 0 through to octet 7 of the IRK and P2 corresponding to octet 8 through to octet 15 of the
+        IRK. The LTK is passed as the plaintext input P3 and P4, with P3 corresponding
+        to octet 0 through to octet 7 of the LTK and P4 corresponding to octet 8 through to octet 15 of the
+        LTK.
 
->>>    2 &nbsp; &nbsp;  The BLE-Keying-Material.KM-Data TLV contains the 16-octet Peripheral Identity Resolving Key,
-        the 16-octet Long Term Key generated during an LE Secure Connection bonding procedure and the
-        16-octet Central Identity Resolving Key. The Peripheral IRK is passed as input P1 and P2,
-        the Long Term Key is passed as input P3 and P4 and the Central IRK is passed as input P5 and P6
-        in the AES key wrapping process with 128-bit KEK defined in {{RFC3394}}.
+>>>    2 &nbsp; &nbsp;  The BLE-Keying-Material.KM-Data TLV contains the encrypted 16-octet Peripheral IRK,
+        the 16-octet LTK generated during an LE Secure Connection bonding procedure and the
+        16-octet Central IRK using the AES key wrapping process with 128-bit KEK defined in {{RFC3394}}.
+        The Peripheral IRK is passed as the plaintext input P1 and P2, with  P1 corresponding
+        to octet 0 through to octet 7 of the IRK and P2 corresponding to octet 8 through to octet 15 of the
+        IRK. The LTK is passed as the plaintext input P3 and P4, with P3 corresponding
+        to octet 0 through to octet 7 of the LTK and P4 corresponding to octet 8 through to octet 15 of the
+        LTK.
+        The Central IRK is passed as plaintext input P5 and P6, with P5 corresponding
+        to octet 0 through to octet 7 of the Central IRK and P6 corresponding to octet 8 through to octet 15 of the
+        Central IRK.
 
 TLV-Length:
 
->  4 octets
+>  6 octets
 
 ### BLE-Keying-Material.KM-Data {#KMdataltv}
 
@@ -629,7 +656,7 @@ TLV-Type:
 
 TLV-Value:
 
->  A "string" data type encoding binary data representing
+>  A string data type encoding a sequence of octets representing
 the actual encrypted keying material as identified using the
 BLE-Keying-Material.KM-Type.
 
@@ -682,6 +709,19 @@ MQTT Messages SHOULD be transported using WebSocket
 the attribute SHOULD specify the URI of a WebSocket server
 that supports the 'mqtt' Sec-WebSocket-Protocol.
 
+A summary of the MQTT-Broker-URI Attribute format is
+shown below. The fields are transmitted from left to right.
+
+~~~~~~~~~~
+0                   1                   2                   3
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|     Type      |  Length       |            Text...
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+~~~~~~~~~~
+{: #attr-broker uri title="Encoding MQTT-Broker-URI Attribute"}
+
+
 Type
 
 >> TBA5
@@ -692,11 +732,11 @@ Length
 
 Data Type
 
->> String
+>> Text
 
 Value
 
->  The String field encodes a URI where the
+>  The text field encodes a URI where the
 MQTT service can be accessed, e.g., "wss://broker.example.com:443".
 
 ### MQTT-Token {#MT}
@@ -711,6 +751,18 @@ MQTT Client with a Network Access Server.
 A MQTT-Token Attributes MAY be included in
 an Access-Accept packet.
 
+A summary of the MQTT-Token Attribute format is
+shown below. The fields are transmitted from left to right.
+
+~~~~~~~~~~
+0                   1                   2                   3
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|     Type      |  Length       |            Text...
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+~~~~~~~~~~
+{: #attr-token uri title="Encoding MQTT-Token Attribute"}
+
 Type
 
 >> TBA6
@@ -721,11 +773,11 @@ Length
 
 Data Type
 
->> String
+>> Text
 
 Value
 
->  The String field is contains a token for use
+>  The text field contains a token for use
 with an MQTT CONNECT packet.
 
 
@@ -791,23 +843,23 @@ enables the BLE Visited Central Host to derive an FQDN of the RADIUS sever assoc
 
 The NAS/BLE Host generates a RADIUS Access-Request message using the prand
 from the RPA as the User-Name attribute and the hash from the RPA to generate the
-TLV-Type "Hashed-Password.Hmac-Sha256-128-Password".
+TLV-Type Hashed-Password.Hmac-Sha256-128-Password.
 The NAS-Port-Type is set to "Wireless - Bluetooth Low Energy".
 
 On receiving the RADIUS Access-Request message, the RADIUS Server uses the keying material exposed by the
 BLE Home Central Host and attempts to resolve the
-User-Name and the TLV-Type "Hashed-Password.Hmac-Sha256-128-Password" to a known BLE Identity Address (IA).  If the RADIUS Server cannot resolve the User-Name
-and TLV-Type "Hashed-Password.Hmac-Sha256-128-Password" to a known BLE
+User-Name and the TLV-Type Hashed-Password.Hmac-Sha256-128-Password to a known BLE Identity Address (IA).  If the RADIUS Server cannot resolve the User-Name
+and TLV-Type Hashed-Password.Hmac-Sha256-128-Password to a known BLE
 Identity Address, the RADIUS server MUST reject the Access-Request.
 
-If the RADIUS Server resolves the User-Name and TLV-Type "Hashed-Password.Hmac-Sha256-128-Password" to a known BLE Identity Address, and the BLE Identity Address is authorized to access via the BLE Visited Host, the RADIUS server recovers the session specific keying material exposed by the
+If the RADIUS Server resolves the User-Name and TLV-Type Hashed-Password.Hmac-Sha256-128-Password to a known BLE Identity Address, and the BLE Identity Address is authorized to access via the BLE Visited Host, the RADIUS server recovers the session specific keying material exposed by the
 BLE Home Central Host.
 
-(Editor's note - update if/when ncoding switched to TLV)
-If the BLE Peripheral is not connectable or connections are not authorized, the RADIUS server encodes the Peripheral Identity Address and the Peripheral Identity Resolving Key in the BLE-Keying-Material attribute and sets the KM Type to 0.
+If the BLE Peripheral is not connectable or connections are not authorized, the RADIUS server signals the Peripheral Identity Address in the TLV-type BLE-Keying-Material.Peripheral-IA, sets the value of TLV-Type BLE-Keying-Material.KM-Type to 0 and encodes the Peripheral Identity Resolving Key in the TLV-Type BLE-Keying-Material.KM-Data.
 If the BLE Peripheral is connectable and connections are authorized via the BLE Visited Host, the RADIUS server
-additionally includes the Central Identity Address and the Long Term Key in the BLE-Keying-Material attribute and sets the KM Type to 1. Finally, if the BLE Peripheral is connectable and connections are authorized via the BLE Visited Host and the security database indicates that the BLE Home Central Host operates using Bluetooth privacy,
-then the RADIUS server additionally includes the Central Identity Resolving Key in the BLE-Keying-Material attribute and sets the KM Type to 2.
+additionally includes the Central Identity Address in the TLV-type BLE-Keying-Material.Central-IA, sets the value of TLV-Type BLE-Keying-Material.KM-Type to 1 and encodes the Peripheral Identity Resolving Key and the 16-octet Long Term Key in the TLV-Type BLE-Keying-Material.KM-Data.
+Finally, if the BLE Peripheral is connectable and connections are authorized via the BLE Visited Host and the security database indicates that the BLE Home Central Host operates using Bluetooth privacy,
+then the RADIUS server sets the value of TLV-Type BLE-Keying-Material.KM-Type to 2 and encodes the Peripheral Identity Resolving Key, the 16-octet Long Term Key and the 16-octet Central Identity Resolving Key in the TLV-Type BLE-Keying-Material.KM-Data.
 
 The RADIUS Server SHOULD include the MQTT-Broker-URI attribute and MAY include the MQTT-Token attribute
 by which an MQTT client associated with the BLE Visited Host can establish an MQTT connection with a Home MQTT Broker
@@ -817,7 +869,7 @@ On receiving the Access-Accept, the NAS/BLE Visited Host recovers the keying mat
 the BLE Peripheral's Identity Address and then establishes an MQTT Connection with the Home MQTT Broker.
 The NAS/BLE Visited Host SHOULD include its NAS-Id in the User Name field of the MQTT CONNECT message
 and MAY include an Operator Name, if for example the NAS has been configured with the operator-name attribute (#126) as
-specified in RFC5580 {{RFC5580}}.
+specified in section 4.1 of RFC5580 {{RFC5580}}.
 
 If the advertisement that triggered the RADIUS exchange corresponds to an ADV_IND then the
 NAS/BLE Visited Host can subsequently establish a secure connection with the BLE Peripheral.
@@ -836,6 +888,7 @@ Peripheral          Host                    Server          Broker
     |  Active Scan    |--Access-Request------->|              |      
     |                 | User-Name=prand        |              |  
     |                 | Hashed-Password.Hmac-Sha256-128-Password=hash
+    |                 | Hashed-Password.Hmac-Sha256-128-Key=key
     |                 | NAS-Port-Type=BLE      |              |  
     |                 | GATT-Service-Profile   |              |
     |                 |                        |              |   
@@ -1102,31 +1155,31 @@ Peripheral           Host                                    Broker
     |                 |                                        |                                                                              
     |                 |<--MQTT PUBLISH-------------------------|                                                                              
     |                 |  topic:{peripheral_identity_address}/  |                                                                              
-    |<-BLE PDU------->|  gatt-req/connect                      |                                                                              
+    |<-BLE PDU------->|  connect/gatt-req                      |                                                                              
     |  Exchange       |  response topic:                       |                                                                              
     |                 |  {peripheral_identity_address}/        |                                                                              
-    |                 |  gatt-res/connect                      |                                                                              
+    |                 |  connect/gatt-res                      |                                                                              
     |                 |  correlation data:{binary_data}        |                                                                              
     |                 |  msg:                                  |
     |                 |                                        |                                                                              
     |                 |---MQTT PUBLISH------------------------>|                                                                              
     |                 |  topic:{peripheral_identity_address}/  |                                                                              
-    |                 |  gatt-res/connect                      |                                                                              
+    |                 |  connect/gatt-res                      |                                                                              
     |                 |  correlation data:{binary data}        |                                                                              
     |                 |  msg: connect-id or error              |                                                                              
     |                 |                                        |
     |                 |<--MQTT PUBLISH-------------------------|                                                                              
     |                 |  topic:{peripheral_identity_address}/  |                                                                              
-    |<-BLE PDU------->|  gatt-req/service-discovery            |                                                                              
+    |<-BLE PDU------->|  service-discovery/gatt-req            |                                                                              
     |  Exchange       |  response topic:                       |                                                                              
     |                 |  {peripheral_identity_address}/        |                                                                              
-    |                 |  gatt-res/service-discovery            |                                                                              
+    |                 |  service-discovery/gatt-res            |                                                                              
     |                 |  correlation data:{binary_data}        |                                                                              
     |                 |  msg: connect-id, optional UUID        |
     |                 |                                        |                                                                              
     |                 |---MQTT PUBLISH------------------------>|                                                                              
     |                 |  topic:{peripheral_identity_address}/  |                                                                              
-    |                 |  gatt-res/service-discovery            |                                                                              
+    |                 |  service-discovery/gatt-res            |                                                                              
     |                 |  correlation data:{binary data}        |                                                                              
     |                 |  msg: service UUID or error            |                                                                              
     |                 |                                        |
